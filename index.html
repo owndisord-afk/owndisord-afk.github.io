@@ -111,6 +111,11 @@ table.st{border-collapse:collapse}table.st td{padding:4px 12px 4px 0;border:0}
 .slot{display:inline-block;width:18px;height:18px;border:2px solid var(--brass);border-radius:4px;margin-right:4px;vertical-align:middle}
 a.btn{text-decoration:none;color:var(--text);display:inline-block}
 textarea{width:100%;min-height:80px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit}
+body.guest .gm-only,body.guest .tags{display:none}
+body.guest main{grid-template-columns:1fr}
+.extra{grid-column:1 / 3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
+.extra b{color:var(--text)}.extra input{width:72px;padding:4px 8px}
+.slot.used{background:var(--brass)}#stat .slot{cursor:pointer}
 </style>
 </head>
 <body>
@@ -169,6 +174,7 @@ textarea{width:100%;min-height:80px;color:var(--text);background:var(--panel2);b
   <section>
     <div class="bar" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Трекер Инициативы</h2><button id="sort">Сортировать по инициативе</button></div>
     <ul id="list"></ul>
+    <div id="stat"></div>
     <hr>
     <label for="newName">Добавить существо (НПС)</label>
     <form id="addForm">
@@ -180,7 +186,7 @@ textarea{width:100%;min-height:80px;color:var(--text);background:var(--panel2);b
     </form>
     <p class="note">Крестик убирает существо из очереди. Игрока можно вернуть кнопкой «+ Имя» под списком, а НПС удаляется насовсем.</p>
   </section>
-  <section>
+  <section class="gm-only">
     <h2>Состояния</h2>
     <label for="who">Существо</label>
     <select id="who"></select>
@@ -229,7 +235,36 @@ var $ = function(id){return document.getElementById(id);};
 function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 function find(id){return S.creatures.filter(function(c){return c.id===id;})[0];}
 
+function isGM(){ return typeof user!=='undefined' && !!user; }
+function numOf(x){ var m = String(x==null?'':x).match(/-?\d+/); return m ? +m[0] : null; }
+function npcOf(c){ return (c.npcId && typeof NPCS!=='undefined' && NPCS) ? NPCS.filter(function(x){ return x.id===c.npcId; })[0] : null; }
+function extraHTML(c){
+  var N = isGM() ? npcOf(c) : null; if(!N) return '';
+  var mx = numOf(N.hp);
+  var cd = (N.abilities||[]).filter(function(a){ return a.rc && (a.rcv||[]).length; }).map(function(a){ return '<span class="tag has-note"><span class="tt">'+esc(a.name||'Способность')+'</span><span class="tn">перезарядка '+a.rcv.join(', ')+'</span></span>'; }).join('');
+  return '<div class="extra">КД <b>'+esc(N.ac||'—')+'</b><span>ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"> / <b>'+(mx==null?'—':mx)+'</b></span><span>Урон <input type="number" data-act="dmg" placeholder="0"></span>'+cd+'</div>';
+}
+function renderStat(){
+  var el = $('stat'), c = S.turn ? find(S.turn) : null, N = (c && c.active && isGM()) ? npcOf(c) : null;
+  if(!N){ el.innerHTML = ''; return; }
+  var u = c.used || (c.used = {a:{},s:{}}), mx = numOf(N.hp);
+  var h = '<div class="blk" data-id="'+c.id+'"><b style="font-size:18px">'+esc(c.name)+'</b><div class="extra" style="margin-top:8px">КД <b>'+esc(N.ac||'—')+'</b><span>Max ХП <b>'+(mx==null?'—':mx)+'</b></span><span>Текущие ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></span><span>Урон <input type="number" data-act="dmg" placeholder="0"></span></div>';
+  (N.abilities||[]).forEach(function(a,i){
+    if(!a.tr) return;
+    var n = +a.trn||1, used = u.a[i]||0, cells = '';
+    for(var k=0;k<n;k++) cells += '<span class="slot'+(k<used?' used':'')+'" data-su="a" data-i="'+i+'" data-k="'+k+'"></span>';
+    h += '<p style="margin:8px 0 0"><b>'+esc(a.name||'Способность')+'</b> <span class="note">'+n+' р/день</span> '+cells+'</p>';
+  });
+  if(N.mage){
+    var rows = '';
+    for(var l=1;l<=9;l++){ var cnt = (N.slots||{})[l]||0; if(!cnt) continue; var us = u.s[l]||0, cl = ''; for(var k=0;k<cnt;k++) cl += '<span class="slot'+(k<us?' used':'')+'" data-su="s" data-i="'+l+'" data-k="'+k+'"></span>'; rows += '<tr><td>'+l+'</td><td>'+cl+'</td></tr>'; }
+    if(rows) h += '<p style="margin:10px 0 2px"><b>Ячейки заклинаний</b></p><table class="st"><tr><td>Ур. ячейки</td><td>Ячейки</td></tr>'+rows+'</table>';
+  }
+  [['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость']].forEach(function(l){ if((N[l[0]]||[]).length) h += '<p style="margin:8px 0 0"><b>'+l[1]+':</b> '+N[l[0]].map(esc).join(', ')+'</p>'; });
+  el.innerHTML = h + '</div>';
+}
 function render(){
+  document.body.classList.toggle('guest', !isGM());
   var present = S.creatures.filter(function(c){return c.active;});
   var html = present.map(function(c){
     var cls = 'row' + (c.pc?'':' npc') + (S.turn===c.id?' current':'');
@@ -237,7 +272,7 @@ function render(){
       '<span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small> '+
         '<button class="del" data-act="del" title="'+(c.pc?'Убрать из боя (нет на игре)':'Удалить')+'" aria-label="Убрать">×</button></span>'+
       '<input class="init" type="number" data-act="init" value="'+esc(String(c.init))+'" placeholder="—" aria-label="Инициатива">'+
-      '<div class="tags">'+c.tags.map(function(t,i){return '<button class="tag'+(t.note?' has-note':'')+'" data-act="tag" data-i="'+i+'" title="Снять состояние"><span class="tt">'+esc(t.t)+'</span>'+(t.note?'<span class="tn">* '+esc(t.note)+'</span>':'')+'</button>';}).join('')+'</div>'+
+      '<div class="tags">'+c.tags.map(function(t,i){return '<button class="tag'+(t.note?' has-note':'')+'" data-act="tag" data-i="'+i+'" title="Снять состояние"><span class="tt">'+esc(t.t)+'</span>'+(t.note?'<span class="tn">* '+esc(t.note)+'</span>':'')+'</button>';}).join('')+'</div>'+extraHTML(c)+
     '</li>';
   }).join('');
   $('list').innerHTML = html || '<li class="empty">Список пуст</li>';
@@ -250,12 +285,36 @@ function render(){
   if(keepWho && find(keepWho)) $('who').value = keepWho;
 
 
+  renderStat();
   save();
 }
 
-$('list').addEventListener('input', function(e){
-  var li = e.target.closest('li'); if(!li || e.target.dataset.act!=='init') return;
-  find(li.dataset.id).init = e.target.value; save();
+function setHp(c,v,src){
+  c.hp = v; save();
+  Array.prototype.forEach.call(document.querySelectorAll('[data-hpid="'+c.id+'"]'), function(x){ if(x!==src) x.value = v; });
+}
+function onTrkInput(e){
+  var t = e.target, act = t.dataset.act;
+  if(act==='init'){ var li = t.closest('li'); if(li){ find(li.dataset.id).init = t.value; save(); } }
+  else if(act==='hp'){ var c = find(t.dataset.hpid); if(c) setHp(c, t.value==='' ? '' : +t.value, t); }
+}
+function onTrkKey(e){
+  if(e.key!=='Enter' || e.target.dataset.act!=='dmg') return;
+  var box = e.target.closest('[data-id]'), c = box && find(box.dataset.id), d = e.target.value;
+  if(!c || d==='' || isNaN(d) || c.hp===''|| c.hp==null) return;
+  var N = npcOf(c), mx = N ? numOf(N.hp) : null, v = c.hp - (+d);
+  if(v<0) v = 0; if(mx!=null && v>mx) v = mx;
+  c.hp = v; render();
+}
+$('list').addEventListener('input', onTrkInput);
+$('stat').addEventListener('input', onTrkInput);
+$('list').addEventListener('keydown', onTrkKey);
+$('stat').addEventListener('keydown', onTrkKey);
+$('stat').addEventListener('click', function(e){
+  var s = e.target.closest('.slot'); if(!s) return;
+  var c = S.turn && find(S.turn); if(!c) return;
+  var m = (c.used || (c.used = {a:{},s:{}}))[s.dataset.su], i = s.dataset.i, k = +s.dataset.k, cur = m[i]||0;
+  m[i] = (cur===k+1) ? k : k+1; save(); renderStat();
 });
 $('absent').addEventListener('click', function(e){
   var b = e.target.closest('button'); if(!b) return;
@@ -311,7 +370,11 @@ $('newFight').onclick = function(){
 $('addForm').onsubmit = function(e){
   e.preventDefault();
   var n = $('newName').value.trim(); if(!n) return;
-  S.creatures.push({id:'n'+Date.now()+(S.seq++),name:n,pc:false,init:'',active:true,tags:[]});
+  var cr = {id:'n'+Date.now()+(S.seq++),name:n,pc:false,init:'',active:true,tags:[]};
+  var b2 = (n.replace(/\s*\d+$/,'').trim() || n).toLowerCase();
+  var N = (isGM() && typeof NPCS!=='undefined' && NPCS) ? NPCS.filter(function(x){ var nm = (x.name||'').toLowerCase(); return nm===n.toLowerCase() || nm===b2; })[0] : null;
+  if(N){ var mx = numOf(N.hp); cr.npcId = N.id; cr.hp = mx==null ? '' : mx; cr.used = {a:{},s:{}}; }
+  S.creatures.push(cr);
   var base = n.replace(/\s*\d+$/,'').trim() || n;
   S.npcs[base] = (S.npcs[base]||0) + 1;
   $('newName').value=''; $('npcList').hidden = true; render();
@@ -366,7 +429,10 @@ function setupAC(inp, ul, items, onEnter, onRemove){
 setupAC($('cond'), $('condList'), BASE, function(){ $('tagNote').focus(); });
 setupAC($('tagNote'), $('acList'), NOTES, function(){ $('apply').click(); });
 setupAC($('newName'), $('npcList'), function(){
-  return Object.keys(S.npcs).sort(function(a,b){ return S.npcs[b]-S.npcs[a] || a.localeCompare(b); });
+  var db = (isGM() && typeof NPCS!=='undefined' && NPCS) ? NPCS.map(function(x){ return x.name; }).filter(Boolean).sort(function(a,b){ return a.localeCompare(b); }) : [];
+  var low = db.map(function(x){ return x.toLowerCase(); });
+  var learned = Object.keys(S.npcs).filter(function(x){ return low.indexOf(x.toLowerCase())===-1; }).sort(function(a,b){ return S.npcs[b]-S.npcs[a] || a.localeCompare(b); });
+  return db.concat(learned);
 }, function(){}, function(name){ delete S.npcs[name]; save(); });
 render();
 </script>
@@ -493,6 +559,7 @@ var SKILLS = [['Акробатика','лвк'],['Анализ (Расследо
 var LISTS = [['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость'],['lang','Языки']];
 var NPCS = null, user = null, ed = null, edId = null, npcParts = ['npc'], fdb = null, fauth = null, unsub = null, fbErr = '';
 function mod(v){ return (v===''||v==null||isNaN(v)) ? null : Math.floor((+v-10)/2); }
+function plus(m,b){ return m==null ? null : m+b; }
 function fm(n){ return n==null ? '—' : (n>=0 ? '+'+n : ''+n); }
 function dash(x){ return (x==null||x==='') ? '—' : esc(x); }
 function blank(){ return {name:'',cr:'',mage:false,slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[]}; }
@@ -505,10 +572,12 @@ try{
   fdb.enablePersistence({synchronizeTabs:true}).catch(function(){});
   fauth.onAuthStateChanged(function(u){
     user = u; if(unsub){ unsub(); unsub = null; }
+    render();
     if(u){
       unsub = fdb.collection('npcs').onSnapshot(function(sn){
         NPCS = sn.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; });
         if(!ed) renderNpc();
+        render();
       }, function(err){ fbErr = err.message; renderNpc(); });
     } else { NPCS = null; renderNpc(); }
   });
@@ -540,13 +609,13 @@ function listHTML(){
 }
 
 function sheetHTML(n){
-  var st = n.stats||{}, h = '';
+  var st = n.stats||{}, h = '', pb = numOf(n.cr)||0;
   h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#npc">К списку</a><a class="btn" href="#npc/'+n.id+'/edit">Редактировать</a></div></div>';
   h += '<p class="note">'+(n.cr?'БМ '+esc(n.cr)+' · ':'')+'КД '+dash(n.ac)+' · ХП '+dash(n.hp)+'</p>';
   h += '<table class="st"><tr><td></td>'+STATS.map(function(s){ return '<td><b>'+s[1]+'</b></td>'; }).join('')+'</tr><tr><td>Знач.</td>'+STATS.map(function(s){ return '<td>'+dash(st[s[0]])+'</td>'; }).join('')+'</tr><tr><td>Мод.</td>'+STATS.map(function(s){ return '<td>'+fm(mod(st[s[0]]))+'</td>'; }).join('')+'</tr></table>';
-  var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return s[1]+' '+fm(mod(st[k])); });
+  var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return s[1]+' '+fm(plus(mod(st[k]),pb)); });
   if(sv.length) h += '<p><b>Спасброски:</b> '+sv.join(', ')+'</p>';
-  var sk = (n.skills||[]).map(function(nm){ var s = SKILLS.filter(function(x){ return x[0]===nm; })[0]; return s ? esc(nm)+' '+fm(mod(st[s[1]])) : ''; }).filter(Boolean);
+  var sk = (n.skills||[]).map(function(nm){ var s = SKILLS.filter(function(x){ return x[0]===nm; })[0]; return s ? esc(nm)+' '+fm(plus(mod(st[s[1]]),pb)) : ''; }).filter(Boolean);
   if(sk.length) h += '<p><b>Навыки:</b> '+sk.join(', ')+'</p>';
   LISTS.forEach(function(l){ if((n[l[0]]||[]).length) h += '<p><b>'+l[1]+':</b> '+n[l[0]].map(esc).join(', ')+'</p>'; });
   if(n.mage){
@@ -563,7 +632,7 @@ function sheetHTML(n){
 
 function F(path,label,val){ return '<div class="fld"><label>'+label+'</label><input data-p="'+path+'" value="'+escA(val==null?'':val)+'"></div>'; }
 function chip(path,v,label,on){ return '<button type="button" class="chip'+(on?' on':'')+'" data-tg="'+path+'" data-v="'+escA(v)+'">'+label+'</button>'; }
-function mspan(k){ return '<span data-mod="'+k+'">'+fm(mod((ed.stats||{})[k]))+'</span>'; }
+function mspan(k,on){ var m = mod((ed.stats||{})[k]); if(on && m!=null) m += (numOf(ed.cr)||0); return '<span data-mod="'+k+'">'+fm(m)+'</span>'; }
 function formHTML(){
   var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?'Редактирование NPC':'Новый NPC')+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
   h += '<div class="grid">'+F('name','Имя',e.name)+F('cr','БМ',e.cr)+F('ac','КД',e.ac)+F('hp','max ХП',e.hp)+'</div>';
@@ -574,8 +643,8 @@ function formHTML(){
     h += '</div></div>';
   }
   h += '<div class="blk"><b>Характеристики</b><table class="st"><tr><td></td><td>Значение</td><td>Модификатор</td></tr>'+STATS.map(function(s){ return '<tr><td>'+s[1]+'</td><td><input data-p="stats.'+s[0]+'" data-num="1" style="width:80px" value="'+escA((e.stats||{})[s[0]]==null?'':e.stats[s[0]])+'"></td><td>'+mspan(s[0])+'</td></tr>'; }).join('')+'</table></div>';
-  h += '<div class="fld"><label>Спасброски</label><div class="chips">'+STATS.map(function(s){ return chip('saves',s[0],s[1]+' '+mspan(s[0]),(e.saves||[]).indexOf(s[0])>-1); }).join('')+'</div></div>';
-  h += '<div class="fld"><label>Владение навыками</label><div class="chips">'+SKILLS.map(function(s){ return chip('skills',s[0],esc(s[0])+' '+mspan(s[1]),(e.skills||[]).indexOf(s[0])>-1); }).join('')+'</div></div>';
+  h += '<div class="fld"><label>Спасброски</label><div class="chips">'+STATS.map(function(s){ return chip('saves',s[0],s[1]+' '+mspan(s[0],(e.saves||[]).indexOf(s[0])>-1),(e.saves||[]).indexOf(s[0])>-1); }).join('')+'</div></div>';
+  h += '<div class="fld"><label>Владение навыками</label><div class="chips">'+SKILLS.map(function(s){ return chip('skills',s[0],esc(s[0])+' '+mspan(s[1],(e.skills||[]).indexOf(s[0])>-1),(e.skills||[]).indexOf(s[0])>-1); }).join('')+'</div></div>';
   h += '<div class="fld"><label>Описание</label><textarea data-p="desc">'+esc(e.desc||'')+'</textarea></div>';
   e.abilities.forEach(function(a,i){
     var P = 'abilities.'+i+'.';
@@ -598,6 +667,14 @@ function formHTML(){
 (function(){
   var R = $('npcRoot');
   function again(){ renderNpc(); }
+  function refreshMods(){
+    var pb = numOf(ed.cr)||0;
+    Array.prototype.forEach.call(R.querySelectorAll('[data-mod]'), function(x){
+      var m = mod((ed.stats||{})[x.dataset.mod]), c = x.closest('.chip');
+      if(c && c.classList.contains('on') && m!=null) m += pb;
+      x.textContent = fm(m);
+    });
+  }
   function login(){
     fauth.signInWithEmailAndPassword($('lgE').value.trim(), $('lgP').value).catch(function(err){ $('lgM').textContent = 'Не удалось войти: '+err.message; });
   }
@@ -605,8 +682,7 @@ function formHTML(){
     var v = el.type==='checkbox' ? el.checked : el.value;
     if(el.dataset.num) v = v==='' ? '' : +v;
     setP(el.dataset.p, v);
-    var m = el.dataset.p.match(/^stats\.(.+)$/);
-    if(m) Array.prototype.forEach.call(R.querySelectorAll('[data-mod="'+m[1]+'"]'), function(x){ x.textContent = fm(mod(v)); });
+    if(/^stats\./.test(el.dataset.p) || el.dataset.p==='cr') refreshMods();
     if(el.dataset.re) again();
   }
   R.addEventListener('input', function(e){
@@ -626,7 +702,7 @@ function formHTML(){
       var arr = getP(b.dataset.tg); if(!arr){ setP(b.dataset.tg, []); arr = getP(b.dataset.tg); }
       var v = /^[0-9]+$/.test(b.dataset.v) ? +b.dataset.v : b.dataset.v, i = arr.indexOf(v);
       if(i>-1) arr.splice(i,1); else arr.push(v);
-      b.classList.toggle('on'); return;
+      b.classList.toggle('on'); refreshMods(); return;
     }
     var a = b.dataset.a, i = +b.dataset.i;
     if(a==='login') login();
