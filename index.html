@@ -41,7 +41,9 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px
 .ac{position:relative}
 .aclist{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:5;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px;gap:0;max-height:200px;overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.4)}
 .aclist[hidden]{display:none}
-.aclist li{padding:6px 9px;border-radius:4px;cursor:pointer}
+.aclist li{display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border-radius:4px;cursor:pointer}
+.aclist .x{color:var(--muted);padding:0 6px;font-weight:400}
+.aclist .x:hover{color:var(--npc)}
 .aclist li:hover,.aclist li.sel{background:var(--tag)}
 .tag.has-note{border-radius:12px;text-align:left}
 .tt{font-size:16px;font-weight:600}
@@ -81,7 +83,10 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
     <hr>
     <label for="newName">Добавить существо (НПС)</label>
     <form id="addForm">
-      <input id="newName" placeholder="Например, Гоблин 1" autocomplete="off">
+      <div class="ac" style="flex:1;min-width:0">
+        <input id="newName" placeholder="Например, Гоблин" autocomplete="off" style="width:100%">
+        <ul class="aclist" id="npcList" hidden></ul>
+      </div>
       <button class="primary" title="Добавить">+</button>
     </form>
     <p class="note">Крестик убирает существо из очереди. Игрока можно вернуть кнопкой «+ Имя» под списком, а НПС удаляется насовсем.</p>
@@ -116,12 +121,13 @@ var PCS = ['Ииска','Дариан','Амелия','Фил','Драуг'];
 function fresh(){
   return {
     creatures: PCS.map(function(n,i){return {id:'pc'+i,name:n,pc:true,init:'',active:true,tags:[]};}),
-    custom: [], turn: null, round: 1, seq: 0
+    custom: [], npcs: {}, turn: null, round: 1, seq: 0
   };
 }
 function load(){
   try{ var s = localStorage.getItem(KEY); if(s){ var d = JSON.parse(s); if(d && d.creatures){
       d.creatures.forEach(function(c){ c.tags = (c.tags||[]).map(function(t){ return typeof t==='string' ? {t:t,note:''} : t; }); });
+      if(!d.npcs) d.npcs = {};
       return d;
     } } }catch(e){}
   return fresh();
@@ -208,7 +214,9 @@ $('addForm').onsubmit = function(e){
   e.preventDefault();
   var n = $('newName').value.trim(); if(!n) return;
   S.creatures.push({id:'n'+Date.now()+(S.seq++),name:n,pc:false,init:'',active:true,tags:[]});
-  $('newName').value=''; render();
+  var base = n.replace(/\s*\d+$/,'').trim() || n;
+  S.npcs[base] = (S.npcs[base]||0) + 1;
+  $('newName').value=''; $('npcList').hidden = true; render();
 };
 $('apply').onclick = function(){
   var c = find($('who').value), t = $('cond').value.trim();
@@ -218,13 +226,15 @@ $('apply').onclick = function(){
   if(ex) ex.note = note; else c.tags.push({t:t,note:note});
   $('tagNote').value = ''; render();
 };
-function setupAC(inp, ul, items, onEnter){
+function escA(t){ return esc(t).replace(/"/g,'&quot;'); }
+function setupAC(inp, ul, items, onEnter, onRemove){
   var idx = -1;
   function show(){
     var q = inp.value.trim().toLowerCase();
-    var list = items.filter(function(n){return n.toLowerCase().indexOf(q)!==-1;});
+    var src = typeof items==='function' ? items() : items;
+    var list = src.filter(function(n){return n.toLowerCase().indexOf(q)!==-1;});
     idx = -1;
-    ul.innerHTML = list.map(function(n){return '<li>'+esc(n)+'</li>';}).join('');
+    ul.innerHTML = list.map(function(n){return '<li data-v="'+escA(n)+'">'+esc(n)+(onRemove?'<b class="x" title="Убрать из подсказок">×</b>':'')+'</li>';}).join('');
     ul.hidden = !list.length;
   }
   function hide(){ ul.hidden = true; idx = -1; }
@@ -236,7 +246,9 @@ function setupAC(inp, ul, items, onEnter){
   inp.addEventListener('blur', hide);
   ul.addEventListener('mousedown', function(e){
     e.preventDefault();
-    var li = e.target.closest('li'); if(li) pick(li.textContent);
+    var li = e.target.closest('li'); if(!li) return;
+    if(e.target.classList.contains('x')){ if(onRemove) onRemove(li.dataset.v); show(); return; }
+    pick(li.dataset.v);
   });
   inp.addEventListener('keydown', function(e){
     var open = !ul.hidden;
@@ -248,13 +260,16 @@ function setupAC(inp, ul, items, onEnter){
       mark();
     } else if(e.key==='Escape'){ hide(); }
     else if(e.key==='Enter'){
-      if(open && idx>=0) pick(ul.children[idx].textContent);
+      if(open && idx>=0){ e.preventDefault(); pick(ul.children[idx].dataset.v); }
       else { hide(); onEnter(); }
     }
   });
 }
 setupAC($('cond'), $('condList'), BASE, function(){ $('tagNote').focus(); });
 setupAC($('tagNote'), $('acList'), NOTES, function(){ $('apply').click(); });
+setupAC($('newName'), $('npcList'), function(){
+  return Object.keys(S.npcs).sort(function(a,b){ return S.npcs[b]-S.npcs[a] || a.localeCompare(b); });
+}, function(){}, function(name){ delete S.npcs[name]; save(); });
 render();
 </script>
 <script>
