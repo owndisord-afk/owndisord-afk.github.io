@@ -16,7 +16,7 @@ h1,h2{font-family:Georgia,"Times New Roman",serif;font-weight:700;margin:0}
 h1{font-size:26px;color:var(--brass)}
 h2{font-size:19px;margin-bottom:12px}
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--line)}
-main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:20px;padding:20px 24px;max-width:1200px;margin:0 auto}
+main{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.3fr);gap:20px;padding:20px 24px;max-width:1800px;margin:0 auto;align-items:start}
 @media(max-width:820px){main{grid-template-columns:1fr;padding:14px}}
 section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
 button,input,select{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 11px}
@@ -116,7 +116,16 @@ body.guest main{grid-template-columns:1fr}
 .extra{grid-column:1 / 3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
 .extra b{color:var(--text)}.extra input{width:72px;padding:4px 8px}
 .slot.used{background:var(--brass)}#stat .slot{cursor:pointer}
-.rcol{display:flex;flex-direction:column;gap:20px;min-width:0}
+.lcol{display:flex;flex-direction:column;gap:20px;min-width:0}
+.a-act{position:sticky;top:12px;min-width:0}
+.a-all{max-height:calc(100vh - 110px);overflow:auto;position:sticky;top:12px;min-width:0}
+#stat .blk{border:2px solid var(--brass);margin:0}
+.placeholder{border:2px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);text-align:center}
+@media(max-width:1100px){main{grid-template-columns:1fr}.a-act,.a-all{position:static;max-height:none}}
+.big{font-size:26px;font-weight:700;text-align:center;padding:10px 8px}.fld input.big{width:100%}
+.bigstats{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
+.bigstats div{flex:1;min-width:90px;max-width:170px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+.bigstats span{display:block;color:var(--muted);font-size:14px}.bigstats b{font-size:34px;color:var(--brass);line-height:1.2}
 #stat .blk,#statAll .blk{background:var(--panel2)}
 .tag.expired{background:#5a2323;border-color:var(--npc)}
 .tag.inf{background:#1f3f48;border-color:var(--pc)}
@@ -177,23 +186,13 @@ body.guest main{grid-template-columns:1fr}
   </div>
 </header>
 <main>
+<div class="lcol">
   <section>
     <div class="bar" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Трекер Инициативы</h2><button id="sort">Сортировать по инициативе</button></div>
     <ul id="list"></ul>
-    <div id="stat"></div>
-    <hr>
-    <label for="newName">Добавить существо (НПС)</label>
-    <form id="addForm">
-      <div class="ac" style="flex:1;min-width:0">
-        <input id="newName" placeholder="Например, Гоблин" autocomplete="off" style="width:100%">
-        <ul class="aclist" id="npcList" hidden></ul>
-      </div>
-      <button class="primary" title="Добавить">+</button>
-    </form>
     <p class="note">Крестик убирает существо из очереди. Игрока можно вернуть кнопкой «+ Имя» под списком, а НПС удаляется насовсем.</p>
   </section>
-  <div class="rcol gm-only">
-  <section>
+    <section class="gm-only">
     <h2>Состояния</h2>
     <label for="who">Существо</label>
     <select id="who"></select>
@@ -212,8 +211,20 @@ body.guest main{grid-template-columns:1fr}
     <div class="stack" style="margin-top:12px"><button class="primary" id="apply">Подтвердить</button></div>
     <p class="note">Клик по состоянию рядом с существом снимает его. Всё сохраняется в браузере автоматически.</p>
   </section>
-  <section id="statAllSec" style="display:none"><h2>Статблоки неписей</h2><div id="statAll"></div></section>
 </div>
+<div class="gm-only a-act"><div id="stat"></div></div>
+<section class="a-all">
+    <h2>Неписи</h2>
+    <label for="newName">Добавить существо (НПС)</label>
+    <form id="addForm">
+      <div class="ac" style="flex:1;min-width:0">
+        <input id="newName" placeholder="Например, Гоблин" autocomplete="off" style="width:100%">
+        <ul class="aclist" id="npcList" hidden></ul>
+      </div>
+      <button class="primary" title="Добавить">+</button>
+    </form>
+    <div class="gm-only"><h2 style="margin-top:18px">Статблоки неписей</h2><div id="statAll"></div></div>
+</section>
 </main>
 <div class="absent" id="absent"></div>
 </div>
@@ -290,8 +301,8 @@ function renderStat(){
     var N = npcOf(c); if(!N) return;
     if(c.id===S.turn) cur = statHTML(c,N); else rest += statHTML(c,N);
   });
-  $('stat').innerHTML = cur; $('statAll').innerHTML = rest;
-  $('statAllSec').style.display = rest ? '' : 'none';
+  $('stat').innerHTML = cur || '<div class="placeholder">Здесь появится статблок непися, когда подойдёт его ход</div>';
+  $('statAll').innerHTML = rest || '<p class="note">Статблоки неприкосновенных, добавленных в бой из базы, будут здесь.</p>';
 }
 function render(){
   document.body.classList.toggle('guest', !isGM());
@@ -394,11 +405,10 @@ $('prev').onclick = function(){
   render();
 };
 $('newFight').onclick = function(){
-  if(!confirm('Убрать неписей и обнулить инициативу и состояния?')) return;
-  S.creatures = S.creatures.filter(function(c){return c.pc;});
-  S.creatures.forEach(function(c){c.init='';c.tags=[];});
-  S.turn = null; S.round = 1;
-  $('cond').value = ''; $('tagNote').value = ''; $('dur').value = 'inf';
+  if(!confirm('Сбросить всё? Неписи, инициатива, состояния и раунд вернутся к начальному виду, все игроки вернутся в бой. Запомненные имена для подсказок сохранятся.')) return;
+  var keepNames = S.npcs;
+  S = fresh(); S.npcs = keepNames || {};
+  $('cond').value = ''; $('tagNote').value = ''; $('dur').value = 'inf'; $('newName').value = '';
   render();
 };
 $('addForm').onsubmit = function(e){
@@ -646,7 +656,7 @@ function listHTML(){
 function sheetHTML(n){
   var st = n.stats||{}, h = '', pb = numOf(n.cr)||0;
   h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#npc">К списку</a><a class="btn" href="#npc/'+n.id+'/edit">Редактировать</a></div></div>';
-  h += '<p class="note">'+(n.cr?'БМ '+esc(n.cr)+' · ':'')+'КД '+dash(n.ac)+' · ХП '+dash(n.hp)+'</p>';
+  h += '<div class="bigstats"><div><span>БМ</span><b>'+dash(n.cr)+'</b></div><div><span>КД</span><b>'+dash(n.ac)+'</b></div><div><span>ХП</span><b>'+dash(n.hp)+'</b></div></div>';
   h += '<table class="st"><tr><td></td>'+STATS.map(function(s){ return '<td><b>'+s[1]+'</b></td>'; }).join('')+'</tr><tr><td>Знач.</td>'+STATS.map(function(s){ return '<td>'+dash(st[s[0]])+'</td>'; }).join('')+'</tr><tr><td>Мод.</td>'+STATS.map(function(s){ return '<td>'+fm(mod(st[s[0]]))+'</td>'; }).join('')+'</tr></table>';
   var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return s[1]+' '+fm(plus(mod(st[k]),pb)); });
   if(sv.length) h += '<p><b>Спасброски:</b> '+sv.join(', ')+'</p>';
@@ -665,12 +675,12 @@ function sheetHTML(n){
   return h;
 }
 
-function F(path,label,val){ return '<div class="fld"><label>'+label+'</label><input data-p="'+path+'" value="'+escA(val==null?'':val)+'"></div>'; }
+function F(path,label,val,cls){ return '<div class="fld"><label>'+label+'</label><input'+(cls?' class="'+cls+'"':'')+' data-p="'+path+'" value="'+escA(val==null?'':val)+'"></div>'; }
 function chip(path,v,label,on){ return '<button type="button" class="chip'+(on?' on':'')+'" data-tg="'+path+'" data-v="'+escA(v)+'">'+label+'</button>'; }
 function mspan(k,on){ var m = mod((ed.stats||{})[k]); if(on && m!=null) m += (numOf(ed.cr)||0); return '<span data-mod="'+k+'">'+fm(m)+'</span>'; }
 function formHTML(){
   var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?'Редактирование NPC':'Новый NPC')+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
-  h += '<div class="grid">'+F('name','Имя',e.name)+F('cr','БМ',e.cr)+F('ac','КД',e.ac)+F('hp','max ХП',e.hp)+'</div>';
+  h += F('name','Имя',e.name)+'<div class="grid" style="grid-template-columns:repeat(3,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+F('hp','max ХП',e.hp,'big')+'</div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="mage" data-re="1" style="width:auto"'+(e.mage?' checked':'')+'> Маг</label></div>';
   if(e.mage){
     h += '<div class="blk"><b>Ячейки заклинаний</b><div class="grid" style="margin-top:8px">';
