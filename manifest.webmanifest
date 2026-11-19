@@ -1,12 +1,16 @@
 {
+  "id": "/",
   "name": "Инициатива ДНД",
   "short_name": "Инициатива",
+  "description": "Трекер инициативы и состояний существ для мастера игры в ДНД",
   "lang": "ru",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#18141f",
   "theme_color": "#18141f",
+  "categories": ["games", "utilities"],
   "icons": [
     {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
     {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
