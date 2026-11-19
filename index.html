@@ -116,6 +116,12 @@ body.guest main{grid-template-columns:1fr}
 .extra{grid-column:1 / 3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
 .extra b{color:var(--text)}.extra input{width:72px;padding:4px 8px}
 .slot.used{background:var(--brass)}#stat .slot{cursor:pointer}
+.rcol{display:flex;flex-direction:column;gap:20px;min-width:0}
+#stat .blk,#statAll .blk{background:var(--panel2)}
+.tag.expired{background:#5a2323;border-color:var(--npc)}
+.tag.inf{background:#1f3f48;border-color:var(--pc)}
+.tn.dend{color:#ff9a92;font-style:normal;font-weight:700}
+.tn.dinf{color:var(--pc);font-style:normal}
 </style>
 </head>
 <body>
@@ -186,7 +192,8 @@ body.guest main{grid-template-columns:1fr}
     </form>
     <p class="note">Крестик убирает существо из очереди. Игрока можно вернуть кнопкой «+ Имя» под списком, а НПС удаляется насовсем.</p>
   </section>
-  <section class="gm-only">
+  <div class="rcol gm-only">
+  <section>
     <h2>Состояния</h2>
     <label for="who">Существо</label>
     <select id="who"></select>
@@ -200,9 +207,13 @@ body.guest main{grid-template-columns:1fr}
       <input id="tagNote" placeholder="Выберите из списка или впишите" autocomplete="off" style="width:100%">
       <ul class="aclist" id="acList" hidden></ul>
     </div>
+    <label for="dur">Длительность</label>
+    <select id="dur"><option value="1">1 раунд</option><option value="10">10 раундов</option><option value="50">50 раундов (5 мин)</option><option value="100">100 раундов (10 мин)</option><option value="inf" selected>бессрочно</option></select>
     <div class="stack" style="margin-top:12px"><button class="primary" id="apply">Подтвердить</button></div>
     <p class="note">Клик по состоянию рядом с существом снимает его. Всё сохраняется в браузере автоматически.</p>
   </section>
+  <section id="statAllSec" style="display:none"><h2>Статблоки неписей</h2><div id="statAll"></div></section>
+</div>
 </main>
 <div class="absent" id="absent"></div>
 </div>
@@ -235,6 +246,17 @@ var $ = function(id){return document.getElementById(id);};
 function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 function find(id){return S.creatures.filter(function(c){return c.id===id;})[0];}
 
+function tagHTML(t,i){
+  var d = '', cls = 'tag';
+  if(t.dur==='inf'){ d = '<span class="tn dinf">бессрочно</span>'; cls += ' inf'; }
+  else if(t.dur!=null){
+    var left = t.start + t.dur - S.round;
+    if(left<=0){ d = '<span class="tn dend">срок вышел, снять</span>'; cls += ' expired'; }
+    else d = '<span class="tn">осталось '+left+' из '+t.dur+' р.</span>';
+  }
+  if(t.note || d) cls += ' has-note';
+  return '<button class="'+cls+'" data-act="tag" data-i="'+i+'" title="Снять состояние"><span class="tt">'+esc(t.t)+'</span>'+(t.note?'<span class="tn">* '+esc(t.note)+'</span>':'')+d+'</button>';
+}
 function isGM(){ return typeof user!=='undefined' && !!user; }
 function numOf(x){ var m = String(x==null?'':x).match(/-?\d+/); return m ? +m[0] : null; }
 function npcOf(c){ return (c.npcId && typeof NPCS!=='undefined' && NPCS) ? NPCS.filter(function(x){ return x.id===c.npcId; })[0] : null; }
@@ -244,9 +266,7 @@ function extraHTML(c){
   var cd = (N.abilities||[]).filter(function(a){ return a.rc && (a.rcv||[]).length; }).map(function(a){ return '<span class="tag has-note"><span class="tt">'+esc(a.name||'Способность')+'</span><span class="tn">перезарядка '+a.rcv.join(', ')+'</span></span>'; }).join('');
   return '<div class="extra">КД <b>'+esc(N.ac||'—')+'</b><span>ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"> / <b>'+(mx==null?'—':mx)+'</b></span><span>Урон <input type="number" data-act="dmg" placeholder="0"></span>'+cd+'</div>';
 }
-function renderStat(){
-  var el = $('stat'), c = S.turn ? find(S.turn) : null, N = (c && c.active && isGM()) ? npcOf(c) : null;
-  if(!N){ el.innerHTML = ''; return; }
+function statHTML(c,N){
   var u = c.used || (c.used = {a:{},s:{}}), mx = numOf(N.hp);
   var h = '<div class="blk" data-id="'+c.id+'"><b style="font-size:18px">'+esc(c.name)+'</b><div class="extra" style="margin-top:8px">КД <b>'+esc(N.ac||'—')+'</b><span>Max ХП <b>'+(mx==null?'—':mx)+'</b></span><span>Текущие ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></span><span>Урон <input type="number" data-act="dmg" placeholder="0"></span></div>';
   (N.abilities||[]).forEach(function(a,i){
@@ -261,7 +281,17 @@ function renderStat(){
     if(rows) h += '<p style="margin:10px 0 2px"><b>Ячейки заклинаний</b></p><table class="st"><tr><td>Ур. ячейки</td><td>Ячейки</td></tr>'+rows+'</table>';
   }
   [['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость']].forEach(function(l){ if((N[l[0]]||[]).length) h += '<p style="margin:8px 0 0"><b>'+l[1]+':</b> '+N[l[0]].map(esc).join(', ')+'</p>'; });
-  el.innerHTML = h + '</div>';
+  return h + '</div>';
+}
+function renderStat(){
+  var cur = '', rest = '';
+  if(isGM()) S.creatures.forEach(function(c){
+    if(!c.active) return;
+    var N = npcOf(c); if(!N) return;
+    if(c.id===S.turn) cur = statHTML(c,N); else rest += statHTML(c,N);
+  });
+  $('stat').innerHTML = cur; $('statAll').innerHTML = rest;
+  $('statAllSec').style.display = rest ? '' : 'none';
 }
 function render(){
   document.body.classList.toggle('guest', !isGM());
@@ -272,7 +302,7 @@ function render(){
       '<span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small> '+
         '<button class="del" data-act="del" title="'+(c.pc?'Убрать из боя (нет на игре)':'Удалить')+'" aria-label="Убрать">×</button></span>'+
       '<input class="init" type="number" data-act="init" value="'+esc(String(c.init))+'" placeholder="—" aria-label="Инициатива">'+
-      '<div class="tags">'+c.tags.map(function(t,i){return '<button class="tag'+(t.note?' has-note':'')+'" data-act="tag" data-i="'+i+'" title="Снять состояние"><span class="tt">'+esc(t.t)+'</span>'+(t.note?'<span class="tn">* '+esc(t.note)+'</span>':'')+'</button>';}).join('')+'</div>'+extraHTML(c)+
+      '<div class="tags">'+c.tags.map(tagHTML).join('')+'</div>'+extraHTML(c)+
     '</li>';
   }).join('');
   $('list').innerHTML = html || '<li class="empty">Список пуст</li>';
@@ -310,12 +340,16 @@ $('list').addEventListener('input', onTrkInput);
 $('stat').addEventListener('input', onTrkInput);
 $('list').addEventListener('keydown', onTrkKey);
 $('stat').addEventListener('keydown', onTrkKey);
-$('stat').addEventListener('click', function(e){
-  var s = e.target.closest('.slot'); if(!s) return;
-  var c = S.turn && find(S.turn); if(!c) return;
-  var m = (c.used || (c.used = {a:{},s:{}}))[s.dataset.su], i = s.dataset.i, k = +s.dataset.k, cur = m[i]||0;
+function onSlot(e){
+  var sl = e.target.closest('.slot'); if(!sl) return;
+  var box = sl.closest('[data-id]'), c = box && find(box.dataset.id); if(!c) return;
+  var m = (c.used || (c.used = {a:{},s:{}}))[sl.dataset.su], i = sl.dataset.i, k = +sl.dataset.k, cur = m[i]||0;
   m[i] = (cur===k+1) ? k : k+1; save(); renderStat();
-});
+}
+$('stat').addEventListener('click', onSlot);
+$('statAll').addEventListener('click', onSlot);
+$('statAll').addEventListener('input', onTrkInput);
+$('statAll').addEventListener('keydown', onTrkKey);
 $('absent').addEventListener('click', function(e){
   var b = e.target.closest('button'); if(!b) return;
   var c = find(b.dataset.back); if(c){ c.active = true; render(); }
@@ -364,7 +398,7 @@ $('newFight').onclick = function(){
   S.creatures = S.creatures.filter(function(c){return c.pc;});
   S.creatures.forEach(function(c){c.init='';c.tags=[];});
   S.turn = null; S.round = 1;
-  $('cond').value = ''; $('tagNote').value = '';
+  $('cond').value = ''; $('tagNote').value = ''; $('dur').value = 'inf';
   render();
 };
 $('addForm').onsubmit = function(e){
@@ -383,8 +417,9 @@ $('apply').onclick = function(){
   var c = find($('who').value), t = $('cond').value.trim();
   if(!c || !t) return;
   var note = $('tagNote').value.trim();
+  var dv = $('dur').value, dur = dv==='inf' ? 'inf' : +dv;
   var ex = c.tags.filter(function(x){return x.t===t;})[0];
-  if(ex) ex.note = note; else c.tags.push({t:t,note:note});
+  if(ex){ ex.note = note; ex.dur = dur; ex.start = S.round; } else c.tags.push({t:t,note:note,dur:dur,start:S.round});
   $('tagNote').value = ''; render();
 };
 function escA(t){ return esc(t).replace(/"/g,'&quot;'); }
