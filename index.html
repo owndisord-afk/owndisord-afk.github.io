@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>Инициатива — ДНД</title>
+<title>ДНД — Кампания</title>
 <style>
 :root{--bg:#18141f;--panel:#231d2e;--panel2:#2c2539;--line:#3b3249;--text:#ece6f2;--muted:#9a90aa;--brass:#e0a44a;--pc:#62b9a8;--npc:#d2675f;--tag:#4a3a66}
 *{box-sizing:border-box}
@@ -23,6 +23,8 @@ button,input,select{font:inherit;color:var(--text);background:var(--panel2);bord
 button{cursor:pointer}
 button:hover{border-color:var(--brass)}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+.bigY{background:var(--brass);color:#1d1508;border-color:var(--brass);font-weight:700;font-size:18px;padding:11px 24px}
+.small{font-size:14px;padding:5px 10px}
 .primary{background:var(--brass);color:#1d1508;border-color:var(--brass);font-weight:700}
 .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .round{color:var(--muted)}
@@ -52,7 +54,7 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px
 .tags{grid-column:1 / 3;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .tags:empty{display:none}
 .tag{background:var(--tag);border:1px solid #6a55a0;border-radius:99px;padding:2px 10px;font-size:14px}
-.tag:hover{border-color:var(--npc);text-decoration:line-through}
+.tag:hover{border-color:var(--npc)}
 .del{padding:2px 8px;color:var(--npc)}
 .empty{color:var(--muted);padding:8px 0}
 label{display:block;margin:12px 0 5px;color:var(--muted);font-size:14px}
@@ -64,21 +66,108 @@ select{width:100%}
 .custom .tag button{all:unset;cursor:pointer;margin-left:6px;color:var(--muted)}
 hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 .note{color:var(--muted);font-size:13px;margin-top:10px}
+
+nav.top{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+nav.top b{font-family:Georgia,serif;color:var(--brass);margin-right:12px}
+nav.top a{color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:6px}
+nav.top a.on{color:var(--brass);background:var(--panel2)}
+.view{display:none}.view.on{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;max-width:860px;margin:40px auto;padding:0 24px}
+.card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:28px;text-decoration:none;color:var(--text)}
+.card:hover{border-color:var(--brass)}
+.card h2{color:var(--brass);margin-bottom:6px}.card p{margin:0;color:var(--muted)}
+.pagehead{max-width:1200px;margin:0 auto;padding:18px 24px 0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.btn{cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 11px}
+.wiki{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;max-width:1200px;margin:0 auto;padding:16px 24px 40px}
+@media(max-width:820px){.wiki{grid-template-columns:1fr;padding:12px 14px}nav.top,.pagehead{padding-left:14px;padding-right:14px}}
+.toc{position:sticky;top:12px;align-self:start;max-height:80vh;overflow:auto;font-size:14px}
+.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 0}
+.toc a:hover{color:var(--brass)}.toc a.l2{padding-left:12px}.toc a.l3,.toc a.l4{padding-left:24px}
+.doc{line-height:1.65;font-size:17px}
+.doc h1,.doc h2,.doc h3,.doc h4{font-family:Georgia,serif;color:var(--brass);margin:1.3em 0 .4em;scroll-margin-top:12px}
+.doc h1{font-size:30px;margin-top:0}.doc h2{font-size:24px;border-bottom:1px solid var(--line);padding-bottom:4px}.doc h3{font-size:20px}
+.doc p{margin:.6em 0}
+.doc ul,.doc ol{display:block;list-style:disc;padding-left:1.5em;margin:.6em 0}.doc ol{list-style:decimal}
+.doc blockquote{margin:.8em 0;padding:2px 14px;border-left:4px solid var(--line);color:var(--muted)}
+.doc mark{background:rgba(224,164,74,.35);color:var(--text);padding:0 3px;border-radius:3px}
+.doc code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:.9em}
+.doc a{color:var(--pc)}.doc hr{margin:1.4em 0}
+.callout{border-left:4px solid var(--brass);background:var(--panel2);padding:8px 14px;border-radius:6px;margin:.9em 0}
+.callout>b{display:block;color:var(--brass)}
+.callout.c-warning{border-color:var(--npc)}.callout.c-warning>b{color:var(--npc)}
+.callout.c-tip{border-color:var(--pc)}.callout.c-tip>b{color:var(--pc)}
+.callout p:first-of-type{margin-top:.3em}
+.tb{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.tb button{padding:4px 9px;font-size:14px}
+#editor{width:100%;min-height:65vh;resize:vertical;font:15px/1.55 ui-monospace,Consolas,monospace;padding:12px}
+
+.npcwrap{max-width:900px;margin:0 auto;padding:20px 24px 40px}
+.fld{margin:10px 0}.fld label{margin:0 0 4px}
+.blk{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{padding:4px 10px;font-size:14px;border-radius:99px}
+.chip.on{background:var(--tag);border-color:#6a55a0}
+table.st{border-collapse:collapse}table.st td{padding:4px 12px 4px 0;border:0}
+.slot{display:inline-block;width:18px;height:18px;border:2px solid var(--brass);border-radius:4px;margin-right:4px;vertical-align:middle}
+a.btn{text-decoration:none;color:var(--text);display:inline-block}
+textarea{width:100%;min-height:80px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit}
 </style>
 </head>
 <body>
+<nav class="top">
+  <b>ДНД</b>
+  <a href="#menu" data-n="menu">Меню</a>
+  <a href="#lore" data-n="lore">Лор</a>
+  <a href="#tracker" data-n="tracker">Бой</a>
+  <a href="#npc" data-n="npc">NPC</a>
+</nav>
+<div class="view" id="v-menu">
+  <div class="cards">
+    <a class="card" href="#lore"><h2>Лор</h2><p>Вики по миру кампании: Кет и Империя</p></a>
+    <a class="card" href="#tracker"><h2>Бой</h2><p>Очередь ходов и состояния существ</p></a>
+    <a class="card" href="#npc"><h2>NPC</h2><p>База неприкосновенна: только для мастера</p></a>
+  </div>
+</div>
+<div class="view" id="v-lore">
+  <div class="cards">
+    <a class="card" href="#wiki-ket"><h2>Кет</h2><p>Кетский лор</p></a>
+    <a class="card" href="#wiki-imp"><h2>Империя</h2><p>Имперский лор</p></a>
+  </div>
+</div>
+<div class="view" id="v-wiki">
+  <div class="pagehead">
+    <h1 id="wTitle"></h1>
+    <div class="bar">
+      <button class="primary" id="wMode">Редактировать</button>
+      <button id="wExport" title="Скачать текст как .md">Экспорт</button>
+      <label class="btn" title="Заменить текст файлом .md или .txt">Импорт<input type="file" id="wImport" accept=".md,.txt" hidden></label>
+    </div>
+  </div>
+  <div class="wiki">
+    <aside class="toc" id="toc"></aside>
+    <div>
+      <div class="doc" id="doc"></div>
+      <div id="edit" hidden>
+        <div class="tb" id="tb"></div>
+        <textarea id="editor" spellcheck="false"></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="view" id="v-npc"><div class="npcwrap" id="npcRoot"></div></div>
+<div class="view" id="v-tracker">
 <header>
-  <h1>Очередь инициативы</h1>
+  <h1>Бой</h1>
   <div class="bar">
     <span class="round">Раунд <b id="round">1</b></span>
-    <button id="next">Следующий ход</button>
-    <button class="primary" id="sort">Сортировать по инициативе</button>
+    <button id="prev" class="small">Ход назад</button>
+    <button id="next" class="bigY">Следующий ход</button>
     <button id="newFight" title="Убрать неписей, обнулить инициативу и состояния">Новый бой</button>
   </div>
 </header>
 <main>
   <section>
-    <h2>Участники</h2>
+    <div class="bar" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Трекер Инициативы</h2><button id="sort">Сортировать по инициативе</button></div>
     <ul id="list"></ul>
     <hr>
     <label for="newName">Добавить существо (НПС)</label>
@@ -110,6 +199,7 @@ hr{border:0;border-top:1px solid var(--line);margin:16px 0}
   </section>
 </main>
 <div class="absent" id="absent"></div>
+</div>
 <script>
 var KEY = 'dnd-initiative-v1';
 // ===== СПИСОК СОСТОЯНИЙ: правьте здесь (каждое в кавычках, через запятую) =====
@@ -202,6 +292,14 @@ $('next').onclick = function(){
   else { S.turn = act[i+1].id; }
   render();
 };
+$('prev').onclick = function(){
+  var act = S.creatures.filter(function(c){return c.active;});
+  var i = act.map(function(c){return c.id;}).indexOf(S.turn);
+  if(i===-1) return;
+  if(i===0){ if(S.round>1){ S.round--; S.turn = act[act.length-1].id; } }
+  else S.turn = act[i-1].id;
+  render();
+};
 $('newFight').onclick = function(){
   if(!confirm('Убрать неписей и обнулить инициативу и состояния?')) return;
   S.creatures = S.creatures.filter(function(c){return c.pc;});
@@ -271,6 +369,289 @@ setupAC($('newName'), $('npcList'), function(){
   return Object.keys(S.npcs).sort(function(a,b){ return S.npcs[b]-S.npcs[a] || a.localeCompare(b); });
 }, function(){}, function(name){ delete S.npcs[name]; save(); });
 render();
+</script>
+<script>
+/*MD*/
+function inline(t){
+  t = esc(t);
+  return t.replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<i>$2</i>')
+    .replace(/~~(.+?)~~/g,'<s>$1</s>')
+    .replace(/==(.+?)==/g,'<mark>$1</mark>')
+    .replace(/\[\[([^\]]+)\]\]/g,'<a href="#" class="wl">$1</a>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s"]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+var heads = [];
+function md(src){
+  var lines = src.replace(/\r/g,'').split('\n'), out = [], list = null, quote = null, para = [];
+  function fP(){ if(para.length){ out.push('<p>'+para.map(inline).join('<br>')+'</p>'); para = []; } }
+  function fL(){ if(list){ out.push('</'+list+'>'); list = null; } }
+  function fQ(){
+    if(!quote) return;
+    var m = quote[0].match(/^\[!(\w+)\]\s*(.*)$/);
+    if(m) out.push('<div class="callout c-'+m[1].toLowerCase()+'"><b>'+inline(m[2]||m[1])+'</b>'+md(quote.slice(1).join('\n'))+'</div>');
+    else out.push('<blockquote>'+md(quote.join('\n'))+'</blockquote>');
+    quote = null;
+  }
+  lines.forEach(function(l){
+    var m;
+    if((m = l.match(/^>\s?(.*)$/))){ fP(); fL(); (quote = quote || []).push(m[1]); return; }
+    fQ();
+    if((m = l.match(/^(#{1,4})\s+(.*)$/))){ fP(); fL(); var i = heads.length; heads.push({l:m[1].length,t:m[2]}); out.push('<h'+m[1].length+' id="wh'+i+'">'+inline(m[2])+'</h'+m[1].length+'>'); return; }
+    if(/^\s*(-{3,}|\*{3,})\s*$/.test(l)){ fP(); fL(); out.push('<hr>'); return; }
+    if((m = l.match(/^\s*([-*+]|\d+[.)])\s+(.*)$/))){
+      fP(); var t = /\d/.test(m[1]) ? 'ol' : 'ul';
+      if(list !== t){ fL(); out.push('<'+t+'>'); list = t; }
+      out.push('<li>'+inline(m[2])+'</li>'); return;
+    }
+    if(!l.trim()){ fP(); fL(); return; }
+    fL(); para.push(l);
+  });
+  fP(); fL(); fQ();
+  return out.join('');
+}
+/*ENDMD*/
+var LKEY = 'dnd-lore-v1', NAMES = {ket:'Кет', imp:'Империя'}, cur = 'ket', editing = false;
+var L = (function(){ try{ var d = JSON.parse(localStorage.getItem(LKEY)); if(d && typeof d==='object') return d; }catch(e){} return {}; })();
+function lsave(){ try{ localStorage.setItem(LKEY, JSON.stringify(L)); }catch(e){} }
+function starter(n){ return '# '+n+'\n\nЗдесь будет лор. Нажмите «Редактировать», чтобы вписать текст.\n\n> [!info] Подсказка\n> Кнопки над полем ввода вставляют оформление: **жирный**, *курсив*, ==подсветка==, заголовки, списки и врезки.\n\nСсылка на раздел: [[Пример раздела]]\n\n## Пример раздела\n\nТекст раздела.'; }
+function txt(){ return L[cur]!=null ? L[cur] : starter(NAMES[cur]); }
+
+function renderDoc(){
+  heads = [];
+  $('doc').innerHTML = md(txt());
+  $('toc').innerHTML = heads.map(function(h,i){ return h.l<=3 ? '<a href="#" class="l'+h.l+'" data-id="wh'+i+'">'+esc(h.t.replace(/[*~=`]/g,''))+'</a>' : ''; }).join('');
+}
+function openWiki(k){
+  cur = k; editing = false;
+  $('wTitle').textContent = 'Лор: '+NAMES[k];
+  $('doc').hidden = false; $('edit').hidden = true; $('wMode').textContent = 'Редактировать';
+  renderDoc();
+}
+$('wMode').onclick = function(){
+  editing = !editing;
+  $('doc').hidden = editing; $('edit').hidden = !editing;
+  $('wMode').textContent = editing ? 'Читать' : 'Редактировать';
+  if(editing){ $('editor').value = txt(); $('editor').focus(); } else renderDoc();
+};
+$('editor').addEventListener('input', function(){ L[cur] = $('editor').value; lsave(); });
+
+var TB = [['Ж','**','**'],['К','*','*'],['Зачёркнуто','~~','~~'],['Подсветка','==','=='],['Заголовок','\n## ',''],['Список','\n- ',''],['Цитата','\n> ',''],['Врезка','\n> [!info] Заголовок\n> ',''],['[[Ссылка]]','[[',']]']];
+$('tb').innerHTML = TB.map(function(b,i){ return '<button type="button" data-i="'+i+'">'+b[0]+'</button>'; }).join('');
+$('tb').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b) return;
+  var t = TB[+b.dataset.i], ta = $('editor'), s = ta.selectionStart, en = ta.selectionEnd;
+  ta.focus(); ta.setRangeText(t[1]+ta.value.slice(s,en)+t[2], s, en, 'end');
+  ta.dispatchEvent(new Event('input'));
+});
+function goHead(i){ var el = $('wh'+i); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }
+$('toc').addEventListener('click', function(e){
+  var a = e.target.closest('a'); if(!a) return; e.preventDefault(); goHead(a.dataset.id.slice(2));
+});
+$('doc').addEventListener('click', function(e){
+  var a = e.target.closest('a.wl'); if(!a) return; e.preventDefault();
+  var q = a.textContent.trim().toLowerCase();
+  for(var i=0;i<heads.length;i++){ if(heads[i].t.replace(/[*~=`]/g,'').trim().toLowerCase()===q){ goHead(i); return; } }
+});
+$('wExport').onclick = function(){
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt()], {type:'text/markdown'}));
+  a.download = 'lore-'+cur+'.md'; a.click();
+};
+$('wImport').onchange = function(e){
+  var f = e.target.files[0]; if(!f) return;
+  var r = new FileReader();
+  r.onload = function(){
+    if(!confirm('Заменить текст этого раздела содержимым файла?')) return;
+    L[cur] = r.result; lsave();
+    if(editing) $('editor').value = txt(); else renderDoc();
+  };
+  r.readAsText(f); e.target.value = '';
+};
+
+function route(){
+  var h = (location.hash || '#menu').slice(1);
+  var v = h==='tracker' ? 'tracker' : h==='lore' ? 'lore' : /^wiki-(ket|imp)$/.test(h) ? 'wiki' : h.indexOf('npc')===0 ? 'npc' : 'menu';
+  ['menu','lore','wiki','npc','tracker'].forEach(function(id){ $('v-'+id).classList.toggle('on', id===v); });
+  var navKey = v==='wiki' ? 'lore' : v;
+  Array.prototype.forEach.call(document.querySelectorAll('nav.top a'), function(a){ a.classList.toggle('on', a.dataset.n===navKey); });
+  if(v==='wiki') openWiki(h.slice(5));
+  if(v!=='npc') ed = null; else if(typeof renderNpc==='function') renderNpc(h.split('/'));
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', route);
+route();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+var FBCFG = {apiKey:"AIzaSyByaQ0WsPeV-xsfVz5LgGOyZuYtwEkKYVY",authDomain:"dnd-campaign-7105f.firebaseapp.com",projectId:"dnd-campaign-7105f",storageBucket:"dnd-campaign-7105f.firebasestorage.app",messagingSenderId:"120428507727",appId:"1:120428507727:web:e5a16e16b216ddf281303a"};
+var STATS = [['тел','ТЕЛ'],['сил','СИЛ'],['лвк','ЛВК'],['инт','ИНТ'],['мдр','МДР'],['хар','ХАР']];
+var SKILLS = [['Акробатика','лвк'],['Анализ (Расследование)','инт'],['Атлетика','сил'],['Внимательность (Восприятие)','мдр'],['Выживание','мдр'],['Выступление','хар'],['Запугивание','хар'],['История','инт'],['Ловкость рук','лвк'],['Медицина','мдр'],['Обман','хар'],['Обращение с животными (Дрессировка)','мдр'],['Природа','инт'],['Проницательность','мдр'],['Религия','инт'],['Скрытность','лвк'],['Магия','инт'],['Убеждение','хар']];
+var LISTS = [['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость'],['lang','Языки']];
+var NPCS = null, user = null, ed = null, edId = null, npcParts = ['npc'], fdb = null, fauth = null, unsub = null, fbErr = '';
+function mod(v){ return (v===''||v==null||isNaN(v)) ? null : Math.floor((+v-10)/2); }
+function fm(n){ return n==null ? '—' : (n>=0 ? '+'+n : ''+n); }
+function dash(x){ return (x==null||x==='') ? '—' : esc(x); }
+function blank(){ return {name:'',cr:'',mage:false,slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[]}; }
+function setP(path,val){ var k = path.split('.'), o = ed; for(var i=0;i<k.length-1;i++){ if(o[k[i]]==null) o[k[i]] = {}; o = o[k[i]]; } o[k[k.length-1]] = val; }
+function getP(path){ return path.split('.').reduce(function(o,k){ return o==null ? o : o[k]; }, ed); }
+
+try{
+  firebase.initializeApp(FBCFG);
+  fauth = firebase.auth(); fdb = firebase.firestore();
+  fdb.enablePersistence({synchronizeTabs:true}).catch(function(){});
+  fauth.onAuthStateChanged(function(u){
+    user = u; if(unsub){ unsub(); unsub = null; }
+    if(u){
+      unsub = fdb.collection('npcs').onSnapshot(function(sn){
+        NPCS = sn.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; });
+        if(!ed) renderNpc();
+      }, function(err){ fbErr = err.message; renderNpc(); });
+    } else { NPCS = null; renderNpc(); }
+  });
+}catch(e){ fbErr = String(e); }
+
+function renderNpc(parts){
+  if(parts) npcParts = parts;
+  var R = $('npcRoot'), p = npcParts;
+  if(typeof firebase==='undefined' || fbErr){ R.innerHTML = '<h1>NPC</h1><p class="note">Не удалось подключиться к базе: '+esc(fbErr||'нет связи с Firebase')+'</p>'; return; }
+  if(!user){ ed = null; R.innerHTML = '<h1>NPC</h1><p class="note">Вход только для мастера.</p><div class="blk"><label>Почта</label><input id="lgE" type="email" autocomplete="username"><label>Пароль</label><input id="lgP" type="password" autocomplete="current-password"><p id="lgM" class="note"></p><button class="bigY" data-a="login">Войти</button></div>'; return; }
+  if(NPCS==null){ R.innerHTML = '<p class="note">Загрузка…</p>'; return; }
+  if(!p[1]){ ed = null; R.innerHTML = listHTML(); return; }
+  if(p[1]==='new'){ if(!ed){ ed = blank(); edId = null; } R.innerHTML = formHTML(); return; }
+  var n = NPCS.filter(function(x){ return x.id===p[1]; })[0];
+  if(!n){ R.innerHTML = '<p class="note">NPC не найден. <a href="#npc">К списку</a></p>'; return; }
+  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = JSON.parse(JSON.stringify(n)); edId = n.id; } R.innerHTML = formHTML(); }
+  else { ed = null; R.innerHTML = sheetHTML(n); }
+}
+
+function listRows(){
+  var q = (window.npcQ||'').toLowerCase();
+  return NPCS.filter(function(n){ return (n.name||'').toLowerCase().indexOf(q)>-1; })
+    .sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); })
+    .map(function(n){ return '<li class="row npc" style="grid-template-columns:1fr auto"><span class="name"><a href="#npc/'+n.id+'" style="color:var(--text)">'+esc(n.name||'Без имени')+'</a>'+(n.cr?'<small>БМ '+esc(n.cr)+'</small>':'')+'</span><a class="btn" href="#npc/'+n.id+'/edit">Редактировать</a></li>'; }).join('')
+    || '<li class="empty">Ничего нет. Нажмите «Создать NPC».</li>';
+}
+function listHTML(){
+  return '<div class="bar" style="justify-content:space-between;margin-bottom:12px"><h1>NPC</h1><div class="bar"><input id="npcQ" placeholder="Поиск" value="'+escA(window.npcQ||'')+'"><a class="btn bigY" href="#npc/new">Создать NPC</a><button class="small" data-a="logout">Выйти</button></div></div><ul id="npcUl">'+listRows()+'</ul>';
+}
+
+function sheetHTML(n){
+  var st = n.stats||{}, h = '';
+  h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#npc">К списку</a><a class="btn" href="#npc/'+n.id+'/edit">Редактировать</a></div></div>';
+  h += '<p class="note">'+(n.cr?'БМ '+esc(n.cr)+' · ':'')+'КД '+dash(n.ac)+' · ХП '+dash(n.hp)+'</p>';
+  h += '<table class="st"><tr><td></td>'+STATS.map(function(s){ return '<td><b>'+s[1]+'</b></td>'; }).join('')+'</tr><tr><td>Знач.</td>'+STATS.map(function(s){ return '<td>'+dash(st[s[0]])+'</td>'; }).join('')+'</tr><tr><td>Мод.</td>'+STATS.map(function(s){ return '<td>'+fm(mod(st[s[0]]))+'</td>'; }).join('')+'</tr></table>';
+  var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return s[1]+' '+fm(mod(st[k])); });
+  if(sv.length) h += '<p><b>Спасброски:</b> '+sv.join(', ')+'</p>';
+  var sk = (n.skills||[]).map(function(nm){ var s = SKILLS.filter(function(x){ return x[0]===nm; })[0]; return s ? esc(nm)+' '+fm(mod(st[s[1]])) : ''; }).filter(Boolean);
+  if(sk.length) h += '<p><b>Навыки:</b> '+sk.join(', ')+'</p>';
+  LISTS.forEach(function(l){ if((n[l[0]]||[]).length) h += '<p><b>'+l[1]+':</b> '+n[l[0]].map(esc).join(', ')+'</p>'; });
+  if(n.mage){
+    var rows = ''; for(var l=1;l<=9;l++){ var c = (n.slots||{})[l]||0; if(c) rows += '<tr><td>'+l+'</td><td>'+new Array(c+1).join('<span class="slot"></span>')+'</td></tr>'; }
+    h += '<div class="blk"><b>Ячейки заклинаний</b><table class="st"><tr><td>Ур. ячейки</td><td>Ячейки</td></tr>'+(rows||'<tr><td colspan="2" class="note">Не настроены</td></tr>')+'</table></div>';
+  }
+  if(n.desc) h += '<div class="blk"><b>Описание</b><p style="white-space:pre-wrap">'+esc(n.desc)+'</p></div>';
+  (n.abilities||[]).forEach(function(a){
+    h += '<div class="blk"><b>'+esc(a.name||'Способность')+'</b>'+(a.tr?' <span class="note">'+a.trn+' р/день</span> '+new Array((+a.trn||1)+1).join('<span class="slot"></span>'):'')+(a.rc&&(a.rcv||[]).length?' <span class="note">Перезарядка '+a.rcv.join(', ')+'</span>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>';
+  });
+  (n.attacks||[]).forEach(function(a){ h += '<div class="blk"><b>'+esc(a.name||'Атака')+'</b>'+(a.hit?' <span class="note">на попадание '+esc(a.hit)+'</span>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>'; });
+  return h;
+}
+
+function F(path,label,val){ return '<div class="fld"><label>'+label+'</label><input data-p="'+path+'" value="'+escA(val==null?'':val)+'"></div>'; }
+function chip(path,v,label,on){ return '<button type="button" class="chip'+(on?' on':'')+'" data-tg="'+path+'" data-v="'+escA(v)+'">'+label+'</button>'; }
+function mspan(k){ return '<span data-mod="'+k+'">'+fm(mod((ed.stats||{})[k]))+'</span>'; }
+function formHTML(){
+  var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?'Редактирование NPC':'Новый NPC')+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
+  h += '<div class="grid">'+F('name','Имя',e.name)+F('cr','БМ',e.cr)+F('ac','КД',e.ac)+F('hp','max ХП',e.hp)+'</div>';
+  h += '<div class="fld"><label><input type="checkbox" data-p="mage" data-re="1" style="width:auto"'+(e.mage?' checked':'')+'> Маг</label></div>';
+  if(e.mage){
+    h += '<div class="blk"><b>Ячейки заклинаний</b><div class="grid" style="margin-top:8px">';
+    for(var l=1;l<=9;l++){ h += '<div><label>Уровень '+l+'</label><select data-p="slots.'+l+'" data-num="1">'+[0,1,2,3,4].map(function(c){ return '<option value="'+c+'"'+(((e.slots||{})[l]||0)===c?' selected':'')+'>'+(c||'нет')+'</option>'; }).join('')+'</select></div>'; }
+    h += '</div></div>';
+  }
+  h += '<div class="blk"><b>Характеристики</b><table class="st"><tr><td></td><td>Значение</td><td>Модификатор</td></tr>'+STATS.map(function(s){ return '<tr><td>'+s[1]+'</td><td><input data-p="stats.'+s[0]+'" data-num="1" style="width:80px" value="'+escA((e.stats||{})[s[0]]==null?'':e.stats[s[0]])+'"></td><td>'+mspan(s[0])+'</td></tr>'; }).join('')+'</table></div>';
+  h += '<div class="fld"><label>Спасброски</label><div class="chips">'+STATS.map(function(s){ return chip('saves',s[0],s[1]+' '+mspan(s[0]),(e.saves||[]).indexOf(s[0])>-1); }).join('')+'</div></div>';
+  h += '<div class="fld"><label>Владение навыками</label><div class="chips">'+SKILLS.map(function(s){ return chip('skills',s[0],esc(s[0])+' '+mspan(s[1]),(e.skills||[]).indexOf(s[0])>-1); }).join('')+'</div></div>';
+  h += '<div class="fld"><label>Описание</label><textarea data-p="desc">'+esc(e.desc||'')+'</textarea></div>';
+  e.abilities.forEach(function(a,i){
+    var P = 'abilities.'+i+'.';
+    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Способность</b><button class="small" data-a="rmAb" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название',a.name)+'<div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div>'
+      +'<div class="fld"><label><input type="checkbox" data-p="'+P+'tr" data-re="1" style="width:auto"'+(a.tr?' checked':'')+'> Трекер</label>'+(a.tr?'<select data-p="'+P+'trn" data-num="1">'+[1,2,3,4,5,6].map(function(c){ return '<option value="'+c+'"'+((+a.trn||1)===c?' selected':'')+'>'+c+' р/день</option>'; }).join('')+'</select>':'')+'</div>'
+      +'<div class="fld"><label><input type="checkbox" data-p="'+P+'rc" data-re="1" style="width:auto"'+(a.rc?' checked':'')+'> Перезарядка</label>'+(a.rc?'<div class="chips">'+[4,5,6].map(function(c){ return chip(P+'rcv',c,c,(a.rcv||[]).indexOf(c)>-1||(a.rcv||[]).indexOf(''+c)>-1); }).join('')+'</div>':'')+'</div></div>';
+  });
+  h += '<button data-a="addAb">Добавить способность</button>';
+  e.attacks.forEach(function(a,i){
+    var P = 'attacks.'+i+'.';
+    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Атака</b><button class="small" data-a="rmAt" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название атаки',a.name)+F(P+'hit','На попадание',a.hit)+'<div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
+  });
+  h += ' <button data-a="addAt">Добавить атаку</button>';
+  LISTS.forEach(function(l){
+    h += '<div class="fld"><label>'+l[1]+'</label><div class="chips">'+(e[l[0]]||[]).map(function(t,i){ return '<span class="tag">'+esc(t)+' <button style="all:unset;cursor:pointer;color:var(--muted)" data-a="rmTag" data-k="'+l[0]+'" data-i="'+i+'">×</button></span>'; }).join('')+'</div><input data-add="'+l[0]+'" placeholder="Впишите и нажмите Enter"></div>';
+  });
+  return h;
+}
+
+(function(){
+  var R = $('npcRoot');
+  function again(){ renderNpc(); }
+  function login(){
+    fauth.signInWithEmailAndPassword($('lgE').value.trim(), $('lgP').value).catch(function(err){ $('lgM').textContent = 'Не удалось войти: '+err.message; });
+  }
+  function onField(el){
+    var v = el.type==='checkbox' ? el.checked : el.value;
+    if(el.dataset.num) v = v==='' ? '' : +v;
+    setP(el.dataset.p, v);
+    var m = el.dataset.p.match(/^stats\.(.+)$/);
+    if(m) Array.prototype.forEach.call(R.querySelectorAll('[data-mod="'+m[1]+'"]'), function(x){ x.textContent = fm(mod(v)); });
+    if(el.dataset.re) again();
+  }
+  R.addEventListener('input', function(e){
+    if(e.target.id==='npcQ'){ window.npcQ = e.target.value; $('npcUl').innerHTML = listRows(); return; }
+    if(e.target.dataset.p && e.target.type!=='checkbox' && e.target.tagName!=='SELECT') onField(e.target);
+  });
+  R.addEventListener('change', function(e){ if(e.target.dataset.p && (e.target.type==='checkbox' || e.target.tagName==='SELECT')) onField(e.target); });
+  R.addEventListener('keydown', function(e){
+    if(e.key!=='Enter') return;
+    if(e.target.id==='lgP'){ login(); return; }
+    var k = e.target.dataset && e.target.dataset.add, t = e.target.value && e.target.value.trim();
+    if(k && t){ e.preventDefault(); (ed[k] = ed[k]||[]).push(t); again(); var n = R.querySelector('[data-add="'+k+'"]'); if(n) n.focus(); }
+  });
+  R.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.tg){
+      var arr = getP(b.dataset.tg); if(!arr){ setP(b.dataset.tg, []); arr = getP(b.dataset.tg); }
+      var v = /^[0-9]+$/.test(b.dataset.v) ? +b.dataset.v : b.dataset.v, i = arr.indexOf(v);
+      if(i>-1) arr.splice(i,1); else arr.push(v);
+      b.classList.toggle('on'); return;
+    }
+    var a = b.dataset.a, i = +b.dataset.i;
+    if(a==='login') login();
+    else if(a==='logout') fauth.signOut();
+    else if(a==='addAb'){ ed.abilities.push({name:'',text:'',tr:false,trn:1,rc:false,rcv:[]}); again(); }
+    else if(a==='rmAb'){ ed.abilities.splice(i,1); again(); }
+    else if(a==='addAt'){ ed.attacks.push({name:'',hit:'',text:''}); again(); }
+    else if(a==='rmAt'){ ed.attacks.splice(i,1); again(); }
+    else if(a==='rmTag'){ ed[b.dataset.k].splice(i,1); again(); }
+    else if(a==='cancel'){ var id = edId; ed = null; location.hash = id ? '#npc/'+id : '#npc'; }
+    else if(a==='del'){
+      if(!confirm('Удалить этого NPC насовсем?')) return;
+      fdb.collection('npcs').doc(edId).delete().catch(function(err){ alert('Не удалилось: '+err.message); });
+      ed = null; location.hash = '#npc';
+    }
+    else if(a==='save'){
+      if(!ed.name.trim()){ alert('Впишите имя'); return; }
+      var data = JSON.parse(JSON.stringify(ed)); delete data.id;
+      var ref = edId ? fdb.collection('npcs').doc(edId) : fdb.collection('npcs').doc();
+      ref.set(data).catch(function(err){ alert('Не сохранилось: '+err.message); });
+      ed = null; location.hash = '#npc/'+ref.id; renderNpc(['npc',ref.id]);
+    }
+  });
+})();
+if(location.hash.indexOf('#npc')===0) renderNpc(location.hash.slice(1).split('/'));
 </script>
 <script>
 if('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
