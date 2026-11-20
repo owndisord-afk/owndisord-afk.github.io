@@ -290,7 +290,7 @@ function tagHTML(t,i,r,ro){
   if(t.note || d) cls += ' has-note';
   return (ro ? '<span class="'+cls+'">' : '<button class="'+cls+'" data-act="tag" data-i="'+i+'" title="Снять состояние">')+'<span class="tt">'+esc(t.t)+'</span>'+(t.note?'<span class="tn">* '+esc(t.note)+'</span>':'')+d+(ro?'</span>':'</button>');
 }
-var GM_UID = 'GvE2iCRlNzWAMq1u9JicP1qv7mJ3';
+var GM_UID = 'CJwMZ3ABF7OLYhLL3iMRQ5TTBBy2';
 function isGM(){ return typeof user!=='undefined' && !!user && user.uid===GM_UID; }
 function dashS(x){ return (x==null||x==='') ? '—' : esc(x); }
 function numOf(x){ var m = String(x==null?'':x).match(/-?\d+/); return m ? +m[0] : null; }
