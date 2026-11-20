@@ -137,6 +137,18 @@ nav.top .authbox{margin-left:auto;font-size:14px;color:var(--muted)}
 span.tag{display:inline-block}
 .pvbox{background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--brass)}
 .hpcompact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:18px;font-weight:700}.hpcompact input{width:75px;font-size:18px;font-weight:700}.hpcompact .damage{width:65px}
+.hpbox{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0}
+.hpcell{text-align:center;min-width:0}
+.hpcell>span{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.hpcell>b{display:block;font-size:32px;line-height:1.25;font-weight:700}
+.hpcell input{width:100%;text-align:center;font-size:32px;font-weight:700;line-height:1.1;padding:2px 4px;background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+.hpcell.cur input{color:var(--pc)}.hpcell.dmg input{color:var(--npc);font-size:26px;line-height:1.35}
+.hpbar{grid-column:1 / -1;height:8px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.hpbar i{display:block;height:100%;border-radius:99px;transition:width .25s,background .25s}
+.ministats{display:flex;gap:8px;margin:8px 0}
+.ministats div{flex:1;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 4px}
+.ministats span{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ministats b{font-size:20px;color:var(--brass)}
 </style>
 </head>
 <body>
@@ -306,9 +318,11 @@ function extraHTML(c){
   var cd = (N.abilities||[]).filter(function(a){ return a.rc && (a.rcv||[]).length; }).map(function(a){ return '<span class="tag has-note"><span class="tt">'+esc(a.name||'Способность')+'</span><span class="tn">перезарядка '+a.rcv.join(', ')+'</span></span>'; }).join('');
   return '<div class="extra">КД <b>'+esc(N.ac||'—')+'</b><span>ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"> / <b>'+(mx==null?'—':mx)+'</b></span><span>Урон <input type="number" data-act="dmg" placeholder="0"></span>'+cd+'</div>';
 }
+function hpPct(cur,mx){ if(!mx || cur===''||cur==null||isNaN(cur)) return 0; return Math.max(0,Math.min(100,Math.round(cur/mx*100))); }
+function hpColor(p){ return p>50 ? 'var(--pc)' : p>25 ? 'var(--brass)' : 'var(--npc)'; }
 function statHTML(c,N){
   var u = c.used || (c.used = {a:{},s:{}}), mx = numOf(N.hp);
-  var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700" title="Открыть лист непися">'+esc(c.name)+'</a><div class="extra" style="margin-top:8px">КД <b>'+esc(N.ac||'—')+'</b><span>БМ <b>'+dashS(N.cr)+'</b></span><span>П. вним. <b>'+dashS(passiveOf(N))+'</b></span></div><div class="hpcompact"><span>Max ХП '+(mx==null?'—':mx)+'</span><span>Тек. ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></span><span>Урон <input class="damage" type="number" data-act="dmg" placeholder="0"></span></div>';
+  var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700" title="Открыть лист непися">'+esc(c.name)+'</a><div class="hpbox"><div class="hpcell"><span>Max ХП</span><b>'+(mx==null?'—':mx)+'</b></div><div class="hpcell cur"><span>Текущие ХП</span><input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></div><div class="hpcell dmg"><span>Урон</span><input class="damage" type="number" data-act="dmg" placeholder="0"></div><div class="hpbar"><i data-hpbar="'+c.id+'" style="width:'+hpPct(c.hp,mx)+'%;background:'+hpColor(hpPct(c.hp,mx))+'"></i></div></div><div class="ministats"><div><span>КД</span><b>'+esc(N.ac||'—')+'</b></div><div><span>БМ</span><b>'+dashS(N.cr)+'</b></div><div><span>П. вним.</span><b>'+dashS(passiveOf(N))+'</b></div></div>';
   var sk = skillsLine(N); var sv = (N.saves||[]).map(function(k){ var st=STATS.filter(function(x){return x[0]===k;})[0]; return (st?st[1]:k.toUpperCase())+' '+fm(plus(mod((N.stats||{})[k]),numOf(N.cr)||0)); });
   if(sv.length) h += '<p style="margin:8px 0 0"><b>Спасброски:</b> '+sv.join(', ')+'</p>';
   if(sk) h += '<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>';
@@ -371,6 +385,8 @@ function render(){
 
 function setHp(c,v,src){
   c.hp = v; save();
+  var Nn = npcOf(c), mxx = Nn ? numOf(Nn.hp) : null, pp = hpPct(v,mxx);
+  Array.prototype.forEach.call(document.querySelectorAll('[data-hpbar="'+c.id+'"]'), function(b){ b.style.width = pp+'%'; b.style.background = hpColor(pp); });
   Array.prototype.forEach.call(document.querySelectorAll('[data-hpid="'+c.id+'"]'), function(x){ if(x!==src) x.value = v; });
 }
 function onTrkInput(e){
