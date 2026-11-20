@@ -153,7 +153,7 @@ span.tag{display:inline-block}
   <div class="cards">
     <a class="card" href="#lore"><h2>Лор</h2><p>Вики по миру кампании: Кет и Империя</p></a>
     <a class="card" href="#tracker"><h2>Бой</h2><p>Очередь ходов и состояния существ</p></a>
-    <a class="card gm-only" href="#npc"><h2>NPC</h2><p>База неприкосновенна: только для мастера</p></a>
+    <a class="card gm-only" href="#npc"><h2>NPC</h2><p>База неписей: только для мастера</p></a>
     <a class="card" href="#pcs"><h2>Игровые персонажи</h2><p>Листы персонажей игроков</p></a>
   </div>
 </div>
@@ -313,11 +313,13 @@ function statHTML(c,N){
   if(sv.length) h += '<p style="margin:8px 0 0"><b>Спасброски:</b> '+sv.join(', ')+'</p>';
   if(sk) h += '<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>';
   (N.abilities||[]).forEach(function(a,i){
-    if(!a.tr) return;
-    var n = +a.trn||1, used = u.a[i]||0, cells = '';
-    var period = a.trp==='round'?'р/раунд':'р/день';
-    for(var k=0;k<n;k++) cells += '<span class="slot'+(k<used?' used':'')+'" data-su="a" data-i="'+i+'" data-k="'+k+'"></span>';
-    h += '<p style="margin:8px 0 0"><b>'+esc(a.name||'Способность')+'</b> <span class="note">'+n+' '+period+'</span> '+cells+'</p>'; 
+    if(!a.tr && !a.note) return;
+    var n = +a.trn||1, used = u.a[i]||0, cells = '', period = a.trp==='round' ? 'р/раунд' : 'р/день';
+    if(a.tr) for(var k=0;k<n;k++) cells += '<span class="slot'+(k<used?' used':'')+'" data-su="a" data-i="'+i+'" data-k="'+k+'"></span>';
+    h += '<p style="margin:8px 0 0"><b>'+esc(a.name||'Способность')+'</b>'+(a.tr ? ' <span class="note">'+n+' '+period+'</span> '+cells : '')+(a.note ? '<br><span class="note">'+esc(a.note)+'</span>' : '')+'</p>';
+  });
+  (N.attacks||[]).forEach(function(a){
+    h += '<p style="margin:8px 0 0"><b>'+esc(a.name||'Атака')+'</b>'+(a.hit ? ' <span class="note">'+esc(a.hit)+'</span>' : '')+(a.note ? '<br><span class="note">'+esc(a.note)+'</span>' : '')+'</p>';
   });
   if(N.mage){
     var rows = '';
@@ -335,7 +337,7 @@ function renderStat(){
     if(c.id===S.turn) cur = statHTML(c,N); else rest += statHTML(c,N);
   });
   $('stat').innerHTML = cur || '<div class="placeholder">Здесь появится статблок непися, когда подойдёт его ход</div>';
-  $('statAll').innerHTML = rest || '<p class="note">Статблоки неприкосновенных, добавленных в бой из базы, будут здесь.</p>';
+  $('statAll').innerHTML = rest || '<p class="note">Статблоки неписей, добавленных в бой из базы, будут здесь.</p>';
 }
 function render(){
   document.body.classList.toggle('guest', !isGM());
@@ -420,7 +422,7 @@ $('list').addEventListener('click', function(e){
   }
 });
 
-function resetRoundTrackers(){ S.creatures.forEach(function(c){ var n=NPCS&&NPCS[c.nid]; if(!n) return; (n.abilities||[]).forEach(function(a,i){ if(a.tr&&a.trp==='round'&&c.used&&c.used.a) c.used.a[i]=0; }); }); }
+function resetRoundTrackers(){ S.creatures.forEach(function(c){ var n = npcOf(c); if(!n || !c.used || !c.used.a) return; (n.abilities||[]).forEach(function(a,i){ if(a.tr && a.trp==='round') c.used.a[i] = 0; }); }); }
 function val(c){ return c.init===''||isNaN(+c.init) ? -Infinity : +c.init; }
 $('sort').onclick = function(){
   var order = S.creatures.map(function(c){return c;});
@@ -769,6 +771,7 @@ $('qApply').onclick = function(){
   $('qCond').value = ''; $('qNote').value = ''; $('qDur').value = 'inf';
 };
 
+var NQ = '';   // search text (not window.npcQ: it would clash with the input#npcQ element)
 function renderNpc(parts){
   if(parts){
     // Reset editor state when switching between NPC and player-character collections.
@@ -791,14 +794,14 @@ function renderNpc(parts){
 }
 
 function listRows(){
-  var q = String(window.npcQ == null ? '' : window.npcQ).toLowerCase();
+  var q = String(NQ||'').toLowerCase();
   return kdata().filter(function(n){ return String(n.name == null ? '' : n.name).toLowerCase().indexOf(q)>-1; })
     .sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); })
     .map(function(n){ return '<li class="row npc" style="grid-template-columns:1fr auto"><span class="name"><a href="#'+HK+'/'+n.id+'" style="color:var(--text)">'+esc(n.name||'Без имени')+'</a>'+(n.cr?'<small>БМ '+esc(n.cr)+'</small>':'')+'</span><a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a></li>'; }).join('')
     || '<li class="empty">Ничего нет. Нажмите «Создать NPC».</li>';
 }
 function listHTML(){
-  return '<div class="bar" style="justify-content:space-between;margin-bottom:12px"><h1>'+cx.title+'</h1><div class="bar"><input id="npcQ" placeholder="Поиск" value="'+escA(String(window.npcQ == null ? '' : window.npcQ))+'"><a class="btn bigY" href="#'+HK+'/new">'+(HK==='pcs'?'Создать персонажа':'Создать NPC')+'</a></div></div><ul id="npcUl">'+listRows()+'</ul>';
+  return '<div class="bar" style="justify-content:space-between;margin-bottom:12px"><h1>'+cx.title+'</h1><div class="bar"><input id="npcQ" placeholder="Поиск" value="'+escA(NQ)+'"><a class="btn bigY" href="#'+HK+'/new">'+(HK==='pcs'?'Создать персонажа':'Создать NPC')+'</a></div></div><ul class="nlist">'+listRows()+'</ul>';
 }
 
 function sheetHTML(n){
@@ -879,7 +882,7 @@ function bindSheet(R){
     if(el.dataset.re) again();
   }
   R.addEventListener('input', function(e){
-    if(e.target.id==='npcQ'){ window.npcQ = e.target.value; $('npcUl').innerHTML = listRows(); return; }
+    if(e.target.id==='npcQ'){ NQ = e.target.value; var ul = R.querySelector('.nlist'); if(ul) ul.innerHTML = listRows(); return; }
     if(e.target.dataset.p && e.target.type!=='checkbox' && e.target.tagName!=='SELECT') onField(e.target);
   });
   R.addEventListener('change', function(e){ if(e.target.dataset.p && (e.target.type==='checkbox' || e.target.tagName==='SELECT')) onField(e.target); });
