@@ -770,12 +770,18 @@ $('qApply').onclick = function(){
 };
 
 function renderNpc(parts){
-  if(parts) npcParts = parts;
+  if(parts){
+    // Reset editor state when switching between NPC and player-character collections.
+    if(parts[0] !== npcParts[0]){ ed = null; edId = null; }
+    npcParts = parts;
+  }
   var p = npcParts; cx = p[0]==='pcs' ? KINDS.pcs : KINDS.npc; HK = cx.h;
   var R = $(cx.root), D = kdata();
+  // Ensure the active root always has visible content while its Firestore data loads.
+  if(!R) return;
+  if(D==null){ R.innerHTML = '<p class="note">Загрузка…</p>'; return; }
   if(!user || typeof firebase==='undefined') return;
   if(fbErr){ R.innerHTML = '<h1>'+cx.title+'</h1><p class="note">Нет доступа к базе: '+esc(fbErr)+'</p>'; return; }
-  if(D==null){ R.innerHTML = '<p class="note">Загрузка…</p>'; return; }
   if(!p[1]){ ed = null; R.innerHTML = listHTML(); return; }
   if(p[1]==='new'){ if(!ed){ ed = blank(); edId = null; } R.innerHTML = formHTML(); return; }
   var n = D.filter(function(x){ return x.id===p[1]; })[0];
