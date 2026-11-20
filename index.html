@@ -34,6 +34,8 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px
 .row.npc{border-left-color:var(--npc)}
 .row.off{opacity:.45}
 .row.current{border-color:var(--brass);border-left-color:var(--brass);box-shadow:0 0 0 1px var(--brass)}
+.row.tie{border-color:#e58a36;border-left-color:#e58a36;box-shadow:0 0 0 1px #e58a36}
+.row.tie.current{border-color:#e58a36;border-left-color:#e58a36;box-shadow:0 0 0 1px #e58a36}
 .name{font-weight:600;overflow-wrap:anywhere}
 .name small{color:var(--muted);font-weight:400;margin-left:6px}
 .init{width:72px;text-align:center;font-size:18px;font-weight:700}
@@ -134,6 +136,7 @@ body.guest main{grid-template-columns:1fr}
 nav.top .authbox{margin-left:auto;font-size:14px;color:var(--muted)}
 span.tag{display:inline-block}
 .pvbox{background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--brass)}
+.hpcompact{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px;font-size:18px;font-weight:700}.hpcompact input{width:75px;font-size:18px;font-weight:700}.hpcompact .damage{width:65px}
 </style>
 </head>
 <body>
@@ -256,11 +259,12 @@ var BASE = ['Ослеплён','Очарован','Оглох','Испуган',
 // ===== ПОДСКАЗКИ ДЛЯ ПОЛЯ «ЗАМЕТКА К СОСТОЯНИЮ»: правьте здесь =====
 var NOTES = ['1 мин','10 мин','до конца сл. хода','до начала сл. хода'];
 var PC_NAMES = ['Ииска','Дариан','Амелия','Фил','Драуг'];
+function newFightId(){ return 'fight-'+Date.now()+'-'+Math.random().toString(36).slice(2,9); }
 
 function fresh(){
   return {
     creatures: PC_NAMES.map(function(n,i){return {id:'pc'+i,name:n,pc:true,init:'',active:true,tags:[]};}),
-    custom: [], npcs: {}, turn: null, round: 1, seq: 0
+    custom: [], npcs: {}, turn: null, round: 1, seq: 0, fightId:newFightId()
   };
 }
 function load(){
@@ -273,6 +277,7 @@ function load(){
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} if(typeof pushCombat==='function') pushCombat(); }
 var S = load();
+if(!S.fightId) S.fightId = newFightId();
 
 var $ = function(id){return document.getElementById(id);};
 function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
@@ -303,18 +308,21 @@ function extraHTML(c){
 }
 function statHTML(c,N){
   var u = c.used || (c.used = {a:{},s:{}}), mx = numOf(N.hp);
-  var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700" title="Открыть лист непися">'+esc(c.name)+'</a><div class="extra" style="margin-top:8px">КД <b>'+esc(N.ac||'—')+'</b><span>БМ <b>'+dashS(N.cr)+'</b></span><span>П. вним. <b>'+dashS(passiveOf(N))+'</b></span><span>Max ХП <b>'+(mx==null?'—':mx)+'</b></span><span>Текущие ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></span><span>Урон <input type="number" data-act="dmg" placeholder="0"></span></div>';
-  var sk = skillsLine(N); if(sk) h += '<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>';
+  var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700" title="Открыть лист непися">'+esc(c.name)+'</a><div class="extra" style="margin-top:8px">КД <b>'+esc(N.ac||'—')+'</b><span>БМ <b>'+dashS(N.cr)+'</b></span><span>П. вним. <b>'+dashS(passiveOf(N))+'</b></span></div><div class="hpcompact"><span>Max ХП '+(mx==null?'—':mx)+'</span><span>Тек. ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></span><span>Урон <input class="damage" type="number" data-act="dmg" placeholder="0"></span></div>';
+  var sk = skillsLine(N); var sv = (N.saves||[]).map(function(k){ var st=STATS.filter(function(x){return x[0]===k;})[0]; return (st?st[1]:k.toUpperCase())+' '+fm(plus(mod((N.stats||{})[k]),numOf(N.cr)||0)); });
+  if(sv.length) h += '<p style="margin:8px 0 0"><b>Спасброски:</b> '+sv.join(', ')+'</p>';
+  if(sk) h += '<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>';
   (N.abilities||[]).forEach(function(a,i){
     if(!a.tr) return;
     var n = +a.trn||1, used = u.a[i]||0, cells = '';
+    var period = a.trp==='round'?'р/раунд':'р/день';
     for(var k=0;k<n;k++) cells += '<span class="slot'+(k<used?' used':'')+'" data-su="a" data-i="'+i+'" data-k="'+k+'"></span>';
-    h += '<p style="margin:8px 0 0"><b>'+esc(a.name||'Способность')+'</b> <span class="note">'+n+' р/день</span> '+cells+'</p>';
+    h += '<p style="margin:8px 0 0"><b>'+esc(a.name||'Способность')+'</b> <span class="note">'+n+' '+period+'</span> '+cells+'</p>'; 
   });
   if(N.mage){
     var rows = '';
     for(var l=1;l<=9;l++){ var cnt = (N.slots||{})[l]||0; if(!cnt) continue; var us = u.s[l]||0, cl = ''; for(var k=0;k<cnt;k++) cl += '<span class="slot'+(k<us?' used':'')+'" data-su="s" data-i="'+l+'" data-k="'+k+'"></span>'; rows += '<tr><td>'+l+'</td><td>'+cl+'</td></tr>'; }
-    if(rows) h += '<p style="margin:10px 0 2px"><b>Ячейки заклинаний</b>'+(N.dc?' <span class="note">СЛ спасброска '+esc(N.dc)+'</span>':'')+'</p><table class="st"><tr><td>Ур. ячейки</td><td>Ячейки</td></tr>'+rows+'</table>';
+    if(rows) h += '<p style="margin:10px 0 2px"><b>Ячейки заклинаний</b>'+(N.dc?' <span class="note">СЛ спасброска '+esc(N.dc)+'</span>':'')+'</p><table class="st">'+rows+'</table>';
   }
   [['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость']].forEach(function(l){ if((N[l[0]]||[]).length) h += '<p style="margin:8px 0 0"><b>'+l[1]+':</b> '+N[l[0]].map(esc).join(', ')+'</p>'; });
   return h + '</div>';
@@ -332,8 +340,12 @@ function renderStat(){
 function render(){
   document.body.classList.toggle('guest', !isGM());
   var present = S.creatures.filter(function(c){return c.active;});
+  var initCounts = {};
+  present.forEach(function(c){ if(c.init!=='' && c.init!=null && !isNaN(+c.init)){ var k=String(+c.init); initCounts[k]=(initCounts[k]||0)+1; } });
+  var tiedIds = {};
+  present.forEach(function(c){ if(c.init!=='' && c.init!=null && !isNaN(+c.init) && initCounts[String(+c.init)]>1) tiedIds[c.id]=true; });
   var html = present.map(function(c){
-    var cls = 'row' + (c.pc?'':' npc') + (S.turn===c.id?' current':'');
+    var cls = 'row' + (c.pc?'':' npc') + (S.turn===c.id?' current':'') + (tiedIds[c.id]?' tie':'');
     return '<li class="'+cls+'" data-id="'+c.id+'">'+
       '<span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small> '+
         '<button class="del" data-act="del" title="'+(c.pc?'Убрать из боя (нет на игре)':'Удалить')+'" aria-label="Убрать">×</button></span>'+
@@ -395,13 +407,20 @@ $('list').addEventListener('click', function(e){
   var li = b.closest('li'); var c = find(li.dataset.id);
   if(b.dataset.act==='tag'){ c.tags.splice(+b.dataset.i,1); render(); }
   if(b.dataset.act==='del'){
-    if(S.turn===c.id) S.turn = null;
+    if(S.turn===c.id){
+      var act = S.creatures.filter(function(x){ return x.active; });
+      var idx = act.map(function(x){ return x.id; }).indexOf(c.id);
+      var next = act.length>1 ? act[(idx+1)%act.length] : null;
+      if(next && idx===act.length-1){ S.round++; resetRoundTrackers(); }
+      S.turn = next ? next.id : null;
+    }
     if(c.pc){ c.active = false; c.init = ''; c.tags = []; }
     else { S.creatures = S.creatures.filter(function(x){return x!==c;}); }
     render();
   }
 });
 
+function resetRoundTrackers(){ S.creatures.forEach(function(c){ var n=NPCS&&NPCS[c.nid]; if(!n) return; (n.abilities||[]).forEach(function(a,i){ if(a.tr&&a.trp==='round'&&c.used&&c.used.a) c.used.a[i]=0; }); }); }
 function val(c){ return c.init===''||isNaN(+c.init) ? -Infinity : +c.init; }
 $('sort').onclick = function(){
   var order = S.creatures.map(function(c){return c;});
@@ -417,7 +436,7 @@ $('next').onclick = function(){
   if(!act.length) return;
   var i = act.map(function(c){return c.id;}).indexOf(S.turn);
   if(i===-1){ S.turn = act[0].id; }
-  else if(i===act.length-1){ S.turn = act[0].id; S.round++; }
+  else if(i===act.length-1){ S.turn = act[0].id; S.round++; resetRoundTrackers(); }
   else { S.turn = act[i+1].id; }
   render();
 };
@@ -673,6 +692,7 @@ function mergeTags(sn){
   sn.docChanges().forEach(function(ch){
     if(ch.type!=='added') return;
     var d = ch.doc.data(), c = find(d.cid);
+    if(d.fightId!==S.fightId){ ch.doc.ref.delete(); return; }
     if(c && c.pc && c.active && d.t){
       var ex = c.tags.filter(function(x){ return x.t===d.t; })[0];
       if(ex){ ex.note = d.note||''; ex.dur = d.dur; ex.start = S.round; } else c.tags.push({t:d.t, note:d.note||'', dur:d.dur, start:S.round});
@@ -686,7 +706,7 @@ function pushCombat(){
   if(!fdb || !isGM()) return;
   clearTimeout(pushT);
   pushT = setTimeout(function(){
-    var data = {round:S.round, turn:S.turn||'', creatures:S.creatures.filter(function(c){ return c.active; }).map(function(c){
+    var data = {fightId:S.fightId, round:S.round, turn:S.turn||'', creatures:S.creatures.filter(function(c){ return c.active; }).map(function(c){
       return {id:c.id, name:c.name, pc:!!c.pc, init:(c.init===''||c.init==null)?'':+c.init, tags:c.pc ? c.tags.map(function(t){ return {t:t.t, note:t.note||'', dur:t.dur==null?'':t.dur, start:t.start==null?0:t.start}; }) : []};
     })};
     fdb.collection('combat').doc('state').set(data).catch(function(){});
@@ -730,9 +750,11 @@ function renderQueue(){
   if(!$('qList')) return;
   if(!COMBAT){ $('qList').innerHTML = ''; $('qEmpty').textContent = 'Мастер ещё не начал бой.'; $('qRound').textContent = '—'; return; }
   $('qEmpty').textContent = ''; $('qRound').textContent = COMBAT.round;
-  var cr = COMBAT.creatures||[];
+  var cr = COMBAT.creatures||[], initCounts = {}, tiedIds = {};
+  cr.forEach(function(c){ if(c.init!=='' && c.init!=null && !isNaN(+c.init)){ var k=String(+c.init); initCounts[k]=(initCounts[k]||0)+1; } });
+  cr.forEach(function(c){ if(c.init!=='' && c.init!=null && !isNaN(+c.init) && initCounts[String(+c.init)]>1) tiedIds[c.id]=true; });
   $('qList').innerHTML = cr.map(function(c){
-    return '<li class="row'+(c.pc?'':' npc')+(COMBAT.turn===c.id?' current':'')+'"><span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small></span><b style="font-size:22px;text-align:center">'+(c.init===''?'—':esc(c.init))+'</b><div class="tags qt">'+(c.tags||[]).map(function(t,i){ return tagHTML(t,i,COMBAT.round,true); }).join('')+'</div></li>';
+    return '<li class="row'+(c.pc?'':' npc')+(COMBAT.turn===c.id?' current':'')+(tiedIds[c.id]?' tie':'')+'"><span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small></span><b style="font-size:22px;text-align:center">'+(c.init===''?'—':esc(c.init))+'</b><div class="tags qt">'+(c.tags||[]).map(function(t,i){ return tagHTML(t,i,COMBAT.round,true); }).join('')+'</div></li>';
   }).join('');
   var pcs = cr.filter(function(c){ return c.pc; }), sig = pcs.map(function(c){ return c.id; }).join();
   if(sig!==qSig){ qSig = sig; var cur = $('qWho').value; $('qWho').innerHTML = pcs.map(function(c){ return '<option value="'+escA(c.id)+'">'+esc(c.name)+'</option>'; }).join(''); if(cur) $('qWho').value = cur; }
@@ -742,7 +764,7 @@ setupAC($('qNote'), $('qNoteList'), NOTES, function(){ $('qApply').click(); });
 $('qApply').onclick = function(){
   var cid = $('qWho').value, t = $('qCond').value.trim(); if(!cid || !t || !fdb) return;
   var dv = $('qDur').value;
-  fdb.collection('playerTags').add({cid:cid, t:t, note:$('qNote').value.trim(), dur:dv==='inf' ? 'inf' : +dv, by:(user&&user.email)||''})
+  fdb.collection('playerTags').add({fightId:COMBAT && COMBAT.fightId || '', cid:cid, t:t, note:$('qNote').value.trim(), dur:dv==='inf' ? 'inf' : +dv, by:(user&&user.email)||''})
     .then(function(){ $('qMsg').textContent = 'Отправлено мастеру.'; }).catch(function(err){ $('qMsg').textContent = 'Не отправилось: '+err.message; });
   $('qCond').value = ''; $('qNote').value = ''; $('qDur').value = 'inf';
 };
@@ -778,20 +800,20 @@ function sheetHTML(n){
   h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#'+HK+'">К списку</a><a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a></div></div>';
   h += '<div class="bigstats"><div><span>БМ</span><b>'+dash(n.cr)+'</b></div><div><span>КД</span><b>'+dash(n.ac)+'</b></div><div><span>П. вним.</span><b>'+dash(passiveOf(n))+'</b></div><div><span>ХП</span><b>'+dash(n.hp)+'</b></div></div>';
   h += '<table class="st"><tr><td></td>'+STATS.map(function(s){ return '<td><b>'+s[1]+'</b></td>'; }).join('')+'</tr><tr><td>Знач.</td>'+STATS.map(function(s){ return '<td>'+dash(st[s[0]])+'</td>'; }).join('')+'</tr><tr><td>Мод.</td>'+STATS.map(function(s){ return '<td>'+fm(mod(st[s[0]]))+'</td>'; }).join('')+'</tr></table>';
-  var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return s[1]+' '+fm(plus(mod(st[k]),pb)); });
+  var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return (s?s[1]:k.toUpperCase())+' '+fm(plus(mod(st[k]),pb)); });
   if(sv.length) h += '<p><b>Спасброски:</b> '+sv.join(', ')+'</p>';
   var sk = (n.skills||[]).map(function(nm){ var s = SKILLS.filter(function(x){ return x[0]===nm; })[0]; return s ? esc(nm)+' '+fm(plus(mod(st[s[1]]),pb)) : ''; }).filter(Boolean);
   if(sk.length) h += '<p><b>Навыки:</b> '+sk.join(', ')+'</p>';
   LISTS.forEach(function(l){ if((n[l[0]]||[]).length) h += '<p><b>'+l[1]+':</b> '+n[l[0]].map(esc).join(', ')+'</p>'; });
   if(n.mage){
     var rows = ''; for(var l=1;l<=9;l++){ var c = (n.slots||{})[l]||0; if(c) rows += '<tr><td>'+l+'</td><td>'+new Array(c+1).join('<span class="slot"></span>')+'</td></tr>'; }
-    h += '<div class="blk"><b>Ячейки заклинаний</b> <span class="note">СЛ спасброска: '+dash(n.dc)+'</span><table class="st"><tr><td>Ур. ячейки</td><td>Ячейки</td></tr>'+(rows||'<tr><td colspan="2" class="note">Не настроены</td></tr>')+'</table></div>';
+    h += '<div class="blk"><b>Ячейки заклинаний</b> <span class="note">СЛ спасброска: '+dash(n.dc)+'</span><table class="st">'+(rows||'<tr><td colspan="2" class="note">Не настроены</td></tr>')+'</table></div>';
   }
   if(n.desc) h += '<div class="blk"><b>Описание</b><p style="white-space:pre-wrap">'+esc(n.desc)+'</p></div>';
   (n.abilities||[]).forEach(function(a){
-    h += '<div class="blk"><b>'+esc(a.name||'Способность')+'</b>'+(a.tr?' <span class="note">'+a.trn+' р/день</span> '+new Array((+a.trn||1)+1).join('<span class="slot"></span>'):'')+(a.rc&&(a.rcv||[]).length?' <span class="note">Перезарядка '+a.rcv.join(', ')+'</span>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>';
+    h += '<div class="blk"><b>'+esc(a.name||'Способность')+'</b>'+(a.tr?' <span class="note">'+a.trn+' '+(a.trp==='round'?'р/раунд':'р/день')+'</span> '+new Array((+a.trn||1)+1).join('<span class="slot"></span>'):'')+(a.rc&&(a.rcv||[]).length?' <span class="note">Перезарядка '+a.rcv.join(', ')+'</span>':'')+(a.note?'<div class="note" style="margin-top:5px">'+esc(a.note)+'</div>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>';
   });
-  (n.attacks||[]).forEach(function(a){ h += '<div class="blk"><b>'+esc(a.name||'Атака')+'</b>'+(a.hit?' <span class="note">на попадание '+esc(a.hit)+'</span>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>'; });
+  (n.attacks||[]).forEach(function(a){ h += '<div class="blk"><b>'+esc(a.name||'Атака')+'</b>'+(a.hit?' <span class="note">на попадание '+esc(a.hit)+'</span>':'')+(a.note?'<div class="note" style="margin-top:5px">'+esc(a.note)+'</div>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>'; });
   return h;
 }
 
@@ -813,14 +835,14 @@ function formHTML(){
   h += '<div class="fld"><label>Описание</label><textarea data-p="desc">'+esc(e.desc||'')+'</textarea></div>';
   e.abilities.forEach(function(a,i){
     var P = 'abilities.'+i+'.';
-    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Способность</b><button class="small" data-a="rmAb" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название',a.name)+'<div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div>'
-      +'<div class="fld"><label><input type="checkbox" data-p="'+P+'tr" data-re="1" style="width:auto"'+(a.tr?' checked':'')+'> Трекер</label>'+(a.tr?'<select data-p="'+P+'trn" data-num="1">'+[1,2,3,4,5,6].map(function(c){ return '<option value="'+c+'"'+((+a.trn||1)===c?' selected':'')+'>'+c+' р/день</option>'; }).join('')+'</select>':'')+'</div>'
+    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Способность</b><button class="small" data-a="rmAb" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название',a.name)+F(P+'note','Краткая заметка',a.note)+'<div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div>'
+      +'<div class="fld"><label><input type="checkbox" data-p="'+P+'tr" data-re="1" style="width:auto"'+(a.tr?' checked':'')+'> Трекер</label>'+(a.tr?'<select data-p="'+P+'trn" data-num="1">'+[1,2,3,4,5,6].map(function(c){ return '<option value="'+c+'"'+((+a.trn||1)===c?' selected':'')+'>'+c+' раз</option>'; }).join('')+'</select><select data-p="'+P+'trp"><option value="day"'+(a.trp!=='round'?' selected':'')+'>в день</option><option value="round"'+(a.trp==='round'?' selected':'')+'>за раунд</option></select>':'')+'</div>'
       +'<div class="fld"><label><input type="checkbox" data-p="'+P+'rc" data-re="1" style="width:auto"'+(a.rc?' checked':'')+'> Перезарядка</label>'+(a.rc?'<div class="chips">'+[4,5,6].map(function(c){ return chip(P+'rcv',c,c,(a.rcv||[]).indexOf(c)>-1||(a.rcv||[]).indexOf(''+c)>-1); }).join('')+'</div>':'')+'</div></div>';
   });
   h += '<button data-a="addAb">Добавить способность</button>';
   e.attacks.forEach(function(a,i){
     var P = 'attacks.'+i+'.';
-    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Атака</b><button class="small" data-a="rmAt" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название атаки',a.name)+F(P+'hit','На попадание',a.hit)+'<div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
+    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Атака</b><button class="small" data-a="rmAt" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название атаки',a.name)+F(P+'hit','На попадание',a.hit)+F(P+'note','Краткая заметка',a.note)+'<div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
   });
   h += ' <button data-a="addAt">Добавить атаку</button>';
   LISTS.forEach(function(l){
@@ -872,9 +894,9 @@ function bindSheet(R){
     var a = b.dataset.a, i = +b.dataset.i;
     if(a==='login') login();
     else if(a==='logout') fauth.signOut();
-    else if(a==='addAb'){ ed.abilities.push({name:'',text:'',tr:false,trn:1,rc:false,rcv:[]}); again(); }
+    else if(a==='addAb'){ ed.abilities.push({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[]}); again(); }
     else if(a==='rmAb'){ ed.abilities.splice(i,1); again(); }
-    else if(a==='addAt'){ ed.attacks.push({name:'',hit:'',text:''}); again(); }
+    else if(a==='addAt'){ ed.attacks.push({name:'',hit:'',note:'',text:''}); again(); }
     else if(a==='rmAt'){ ed.attacks.splice(i,1); again(); }
     else if(a==='rmTag'){ ed[b.dataset.k].splice(i,1); again(); }
     else if(a==='cancel'){ var id = edId; ed = null; location.hash = id ? '#'+HK+'/'+id : '#'+HK; }
