@@ -111,7 +111,7 @@ table.st{border-collapse:collapse}table.st td{padding:4px 12px 4px 0;border:0}
 .slot{display:inline-block;width:18px;height:18px;border:2px solid var(--brass);border-radius:4px;margin-right:4px;vertical-align:middle}
 a.btn{text-decoration:none;color:var(--text);display:inline-block}
 textarea{width:100%;min-height:80px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit}
-body.guest .gm-only,body.guest .tags{display:none}
+body.guest .gm-only,body.guest .tags:not(.qt){display:none}
 body.guest main{grid-template-columns:1fr}
 .extra{grid-column:1 / 3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
 .extra b{color:var(--text)}.extra input{width:72px;padding:4px 8px}
@@ -131,6 +131,9 @@ body.guest main{grid-template-columns:1fr}
 .tag.inf{background:#1f3f48;border-color:var(--pc)}
 .tn.dend{color:#ff9a92;font-style:normal;font-weight:700}
 .tn.dinf{color:var(--pc);font-style:normal}
+nav.top .authbox{margin-left:auto;font-size:14px;color:var(--muted)}
+span.tag{display:inline-block}
+.pvbox{background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--brass)}
 </style>
 </head>
 <body>
@@ -139,13 +142,16 @@ body.guest main{grid-template-columns:1fr}
   <a href="#menu" data-n="menu">Меню</a>
   <a href="#lore" data-n="lore">Лор</a>
   <a href="#tracker" data-n="tracker">Бой</a>
-  <a href="#npc" data-n="npc">NPC</a>
+  <a href="#npc" data-n="npc" class="gm-only">NPC</a>
+  <a href="#pcs" data-n="pcs">Персонажи</a>
+  <span class="authbox" id="authBox"></span>
 </nav>
 <div class="view" id="v-menu">
   <div class="cards">
     <a class="card" href="#lore"><h2>Лор</h2><p>Вики по миру кампании: Кет и Империя</p></a>
     <a class="card" href="#tracker"><h2>Бой</h2><p>Очередь ходов и состояния существ</p></a>
-    <a class="card" href="#npc"><h2>NPC</h2><p>База неприкосновенна: только для мастера</p></a>
+    <a class="card gm-only" href="#npc"><h2>NPC</h2><p>База неприкосновенна: только для мастера</p></a>
+    <a class="card" href="#pcs"><h2>Игровые персонажи</h2><p>Листы персонажей игроков</p></a>
   </div>
 </div>
 <div class="view" id="v-lore">
@@ -158,9 +164,9 @@ body.guest main{grid-template-columns:1fr}
   <div class="pagehead">
     <h1 id="wTitle"></h1>
     <div class="bar">
-      <button class="primary" id="wMode">Редактировать</button>
+      <button class="primary gm-only" id="wMode">Редактировать</button>
       <button id="wExport" title="Скачать текст как .md">Экспорт</button>
-      <label class="btn" title="Заменить текст файлом .md или .txt">Импорт<input type="file" id="wImport" accept=".md,.txt" hidden></label>
+      <label class="btn gm-only" title="Заменить текст файлом .md или .txt">Импорт<input type="file" id="wImport" accept=".md,.txt" hidden></label>
     </div>
   </div>
   <div class="wiki">
@@ -175,6 +181,21 @@ body.guest main{grid-template-columns:1fr}
   </div>
 </div>
 <div class="view" id="v-npc"><div class="npcwrap" id="npcRoot"></div></div>
+<div class="view" id="v-pcs"><div class="npcwrap" id="pcRoot"></div></div>
+<div class="view" id="v-login"><div class="npcwrap" id="loginRoot"></div></div>
+<div class="view" id="v-queue"><div class="npcwrap">
+  <div class="bar" style="justify-content:space-between"><h1>Бой</h1><span class="round">Раунд <b id="qRound">—</b></span></div>
+  <p class="note" id="qEmpty"></p>
+  <ul id="qList"></ul>
+  <div class="blk"><b>Состояние на игрока</b>
+    <label for="qWho">Персонаж</label><select id="qWho"></select>
+    <label for="qCond">Состояние</label><div class="ac"><input id="qCond" placeholder="Выберите из списка или впишите своё" autocomplete="off" style="width:100%"><ul class="aclist" id="qCondList" hidden></ul></div>
+    <label for="qNote">Заметка (необязательно)</label><div class="ac"><input id="qNote" placeholder="Выберите из списка или впишите" autocomplete="off" style="width:100%"><ul class="aclist" id="qNoteList" hidden></ul></div>
+    <label for="qDur">Длительность</label><select id="qDur"><option value="1">1 раунд</option><option value="10">10 раундов</option><option value="50">50 раундов (5 мин)</option><option value="100">100 раундов (10 мин)</option><option value="inf" selected>бессрочно</option></select>
+    <div class="stack" style="margin-top:12px"><button class="bigY" id="qApply">Подтвердить</button></div>
+    <p class="note" id="qMsg"></p>
+  </div>
+</div></div>
 <div class="view" id="v-tracker">
 <header>
   <h1>Бой</h1>
@@ -250,25 +271,28 @@ function load(){
     } } }catch(e){}
   return fresh();
 }
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} if(typeof pushCombat==='function') pushCombat(); }
 var S = load();
 
 var $ = function(id){return document.getElementById(id);};
 function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
 function find(id){return S.creatures.filter(function(c){return c.id===id;})[0];}
 
-function tagHTML(t,i){
+function tagHTML(t,i,r,ro){
+  var rr = r==null ? S.round : r;
   var d = '', cls = 'tag';
   if(t.dur==='inf'){ d = '<span class="tn dinf">бессрочно</span>'; cls += ' inf'; }
-  else if(t.dur!=null){
-    var left = t.start + t.dur - S.round;
+  else if(t.dur!=null && t.dur!==''){
+    var left = t.start + t.dur - rr;
     if(left<=0){ d = '<span class="tn dend">срок вышел, снять</span>'; cls += ' expired'; }
     else d = '<span class="tn">осталось '+left+' из '+t.dur+' р.</span>';
   }
   if(t.note || d) cls += ' has-note';
-  return '<button class="'+cls+'" data-act="tag" data-i="'+i+'" title="Снять состояние"><span class="tt">'+esc(t.t)+'</span>'+(t.note?'<span class="tn">* '+esc(t.note)+'</span>':'')+d+'</button>';
+  return (ro ? '<span class="'+cls+'">' : '<button class="'+cls+'" data-act="tag" data-i="'+i+'" title="Снять состояние">')+'<span class="tt">'+esc(t.t)+'</span>'+(t.note?'<span class="tn">* '+esc(t.note)+'</span>':'')+d+(ro?'</span>':'</button>');
 }
-function isGM(){ return typeof user!=='undefined' && !!user; }
+var GM_UID = 'GvE2iCRlNzWAMq1u9JicP1qv7mJ3';
+function isGM(){ return typeof user!=='undefined' && !!user && user.uid===GM_UID; }
+function dashS(x){ return (x==null||x==='') ? '—' : esc(x); }
 function numOf(x){ var m = String(x==null?'':x).match(/-?\d+/); return m ? +m[0] : null; }
 function npcOf(c){ return (c.npcId && typeof NPCS!=='undefined' && NPCS) ? NPCS.filter(function(x){ return x.id===c.npcId; })[0] : null; }
 function extraHTML(c){
@@ -279,7 +303,8 @@ function extraHTML(c){
 }
 function statHTML(c,N){
   var u = c.used || (c.used = {a:{},s:{}}), mx = numOf(N.hp);
-  var h = '<div class="blk" data-id="'+c.id+'"><b style="font-size:18px">'+esc(c.name)+'</b><div class="extra" style="margin-top:8px">КД <b>'+esc(N.ac||'—')+'</b><span>Max ХП <b>'+(mx==null?'—':mx)+'</b></span><span>Текущие ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></span><span>Урон <input type="number" data-act="dmg" placeholder="0"></span></div>';
+  var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700" title="Открыть лист непися">'+esc(c.name)+'</a><div class="extra" style="margin-top:8px">КД <b>'+esc(N.ac||'—')+'</b><span>БМ <b>'+dashS(N.cr)+'</b></span><span>П. вним. <b>'+dashS(passiveOf(N))+'</b></span><span>Max ХП <b>'+(mx==null?'—':mx)+'</b></span><span>Текущие ХП <input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></span><span>Урон <input type="number" data-act="dmg" placeholder="0"></span></div>';
+  var sk = skillsLine(N); if(sk) h += '<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>';
   (N.abilities||[]).forEach(function(a,i){
     if(!a.tr) return;
     var n = +a.trn||1, used = u.a[i]||0, cells = '';
@@ -289,7 +314,7 @@ function statHTML(c,N){
   if(N.mage){
     var rows = '';
     for(var l=1;l<=9;l++){ var cnt = (N.slots||{})[l]||0; if(!cnt) continue; var us = u.s[l]||0, cl = ''; for(var k=0;k<cnt;k++) cl += '<span class="slot'+(k<us?' used':'')+'" data-su="s" data-i="'+l+'" data-k="'+k+'"></span>'; rows += '<tr><td>'+l+'</td><td>'+cl+'</td></tr>'; }
-    if(rows) h += '<p style="margin:10px 0 2px"><b>Ячейки заклинаний</b></p><table class="st"><tr><td>Ур. ячейки</td><td>Ячейки</td></tr>'+rows+'</table>';
+    if(rows) h += '<p style="margin:10px 0 2px"><b>Ячейки заклинаний</b>'+(N.dc?' <span class="note">СЛ спасброска '+esc(N.dc)+'</span>':'')+'</p><table class="st"><tr><td>Ур. ячейки</td><td>Ячейки</td></tr>'+rows+'</table>';
   }
   [['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость']].forEach(function(l){ if((N[l[0]]||[]).length) h += '<p style="margin:8px 0 0"><b>'+l[1]+':</b> '+N[l[0]].map(esc).join(', ')+'</p>'; });
   return h + '</div>';
@@ -430,7 +455,7 @@ $('apply').onclick = function(){
   var dv = $('dur').value, dur = dv==='inf' ? 'inf' : +dv;
   var ex = c.tags.filter(function(x){return x.t===t;})[0];
   if(ex){ ex.note = note; ex.dur = dur; ex.start = S.round; } else c.tags.push({t:t,note:note,dur:dur,start:S.round});
-  $('tagNote').value = ''; render();
+  $('tagNote').value = ''; $('cond').value = ''; $('dur').value = 'inf'; render();
 };
 function escA(t){ return esc(t).replace(/"/g,'&quot;'); }
 function setupAC(inp, ul, items, onEnter, onRemove){
@@ -525,9 +550,10 @@ function md(src){
 /*ENDMD*/
 var LKEY = 'dnd-lore-v1', NAMES = {ket:'Кет', imp:'Империя'}, cur = 'ket', editing = false;
 var L = (function(){ try{ var d = JSON.parse(localStorage.getItem(LKEY)); if(d && typeof d==='object') return d; }catch(e){} return {}; })();
-function lsave(){ try{ localStorage.setItem(LKEY, JSON.stringify(L)); }catch(e){} }
+var LORE = {}, lt = null;
+function lsave(k){ if(!isGM() || typeof fdb==='undefined' || !fdb) return; clearTimeout(lt); lt = setTimeout(function(){ fdb.collection('lore').doc(k).set({text:LORE[k]}).catch(function(){}); }, 600); }
 function starter(n){ return '# '+n+'\n\nЗдесь будет лор. Нажмите «Редактировать», чтобы вписать текст.\n\n> [!info] Подсказка\n> Кнопки над полем ввода вставляют оформление: **жирный**, *курсив*, ==подсветка==, заголовки, списки и врезки.\n\nСсылка на раздел: [[Пример раздела]]\n\n## Пример раздела\n\nТекст раздела.'; }
-function txt(){ return L[cur]!=null ? L[cur] : starter(NAMES[cur]); }
+function txt(){ return LORE[cur]!=null ? LORE[cur] : starter(NAMES[cur]); }
 
 function renderDoc(){
   heads = [];
@@ -546,7 +572,7 @@ $('wMode').onclick = function(){
   $('wMode').textContent = editing ? 'Читать' : 'Редактировать';
   if(editing){ $('editor').value = txt(); $('editor').focus(); } else renderDoc();
 };
-$('editor').addEventListener('input', function(){ L[cur] = $('editor').value; lsave(); });
+$('editor').addEventListener('input', function(){ LORE[cur] = $('editor').value; lsave(cur); });
 
 var TB = [['Ж','**','**'],['К','*','*'],['Зачёркнуто','~~','~~'],['Подсветка','==','=='],['Заголовок','\n## ',''],['Список','\n- ',''],['Цитата','\n> ',''],['Врезка','\n> [!info] Заголовок\n> ',''],['[[Ссылка]]','[[',']]']];
 $('tb').innerHTML = TB.map(function(b,i){ return '<button type="button" data-i="'+i+'">'+b[0]+'</button>'; }).join('');
@@ -575,20 +601,30 @@ $('wImport').onchange = function(e){
   var r = new FileReader();
   r.onload = function(){
     if(!confirm('Заменить текст этого раздела содержимым файла?')) return;
-    L[cur] = r.result; lsave();
+    LORE[cur] = r.result; lsave(cur);
     if(editing) $('editor').value = txt(); else renderDoc();
   };
   r.readAsText(f); e.target.value = '';
 };
 
 function route(){
-  var h = (location.hash || '#menu').slice(1);
-  var v = h==='tracker' ? 'tracker' : h==='lore' ? 'lore' : /^wiki-(ket|imp)$/.test(h) ? 'wiki' : h.indexOf('npc')===0 ? 'npc' : 'menu';
-  ['menu','lore','wiki','npc','tracker'].forEach(function(id){ $('v-'+id).classList.toggle('on', id===v); });
-  var navKey = v==='wiki' ? 'lore' : v;
-  Array.prototype.forEach.call(document.querySelectorAll('nav.top a'), function(a){ a.classList.toggle('on', a.dataset.n===navKey); });
+  var h = (location.hash || '#menu').slice(1), v, want, msg = '';
+  if(h==='tracker') v = 'tracker'; else if(h==='lore') v = 'lore'; else if(/^wiki-(ket|imp)$/.test(h)) v = 'wiki';
+  else if(h.indexOf('npc')===0) v = 'npc'; else if(h.indexOf('pcs')===0) v = 'pcs'; else v = 'menu';
+  want = v;
+  if(v!=='menu'){
+    if(typeof authReady==='undefined' || !authReady){ v = 'login'; msg = 'load'; }
+    else if(!user){ v = 'login'; msg = 'login'; }
+    else if(v==='npc' && !isGM()){ v = 'login'; msg = 'gm'; }
+    else if(v==='tracker' && !isGM()) v = 'queue';
+  }
+  ['menu','lore','wiki','npc','pcs','tracker','queue','login'].forEach(function(id){ $('v-'+id).classList.toggle('on', id===v); });
+  var nk = want==='wiki' ? 'lore' : want;
+  Array.prototype.forEach.call(document.querySelectorAll('nav.top a'), function(a){ a.classList.toggle('on', a.dataset.n===nk); });
   if(v==='wiki') openWiki(h.slice(5));
-  if(v!=='npc') ed = null; else if(typeof renderNpc==='function') renderNpc(h.split('/'));
+  if(v==='npc' || v==='pcs'){ if(typeof renderNpc==='function') renderNpc(h.split('/')); } else ed = null;
+  if(v==='queue' && typeof renderQueue==='function') renderQueue();
+  if(v==='login' && typeof renderLogin==='function') renderLogin(msg);
   window.scrollTo(0,0);
 }
 window.addEventListener('hashchange', route);
@@ -602,61 +638,145 @@ var FBCFG = {apiKey:"AIzaSyByaQ0WsPeV-xsfVz5LgGOyZuYtwEkKYVY",authDomain:"dnd-ca
 var STATS = [['тел','ТЕЛ'],['сил','СИЛ'],['лвк','ЛВК'],['инт','ИНТ'],['мдр','МДР'],['хар','ХАР']];
 var SKILLS = [['Акробатика','лвк'],['Анализ (Расследование)','инт'],['Атлетика','сил'],['Внимательность (Восприятие)','мдр'],['Выживание','мдр'],['Выступление','хар'],['Запугивание','хар'],['История','инт'],['Ловкость рук','лвк'],['Медицина','мдр'],['Обман','хар'],['Обращение с животными (Дрессировка)','мдр'],['Природа','инт'],['Проницательность','мдр'],['Религия','инт'],['Скрытность','лвк'],['Магия','инт'],['Убеждение','хар']];
 var LISTS = [['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость'],['lang','Языки']];
-var NPCS = null, user = null, ed = null, edId = null, npcParts = ['npc'], fdb = null, fauth = null, unsub = null, fbErr = '';
+var NPCS = null, PCS = null, COMBAT = null, user = null, authReady = false, ed = null, edId = null, npcParts = ['npc'], fdb = null, fauth = null, unsubs = [], fbErr = '', qSig = '';
+var KINDS = {npc:{h:'npc',col:'npcs',root:'npcRoot',title:'NPC'}, pcs:{h:'pcs',col:'pcs',root:'pcRoot',title:'Игровые персонажи'}}, cx = KINDS.npc, HK = 'npc';
+function kdata(){ return cx.h==='pcs' ? PCS : NPCS; }
 function mod(v){ return (v===''||v==null||isNaN(v)) ? null : Math.floor((+v-10)/2); }
 function plus(m,b){ return m==null ? null : m+b; }
 function fm(n){ return n==null ? '—' : (n>=0 ? '+'+n : ''+n); }
 function dash(x){ return (x==null||x==='') ? '—' : esc(x); }
-function blank(){ return {name:'',cr:'',mage:false,slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[]}; }
+function blank(){ return {name:'',cr:'',mage:false,dc:'',slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[]}; }
 function setP(path,val){ var k = path.split('.'), o = ed; for(var i=0;i<k.length-1;i++){ if(o[k[i]]==null) o[k[i]] = {}; o = o[k[i]]; } o[k[k.length-1]] = val; }
 function getP(path){ return path.split('.').reduce(function(o,k){ return o==null ? o : o[k]; }, ed); }
+function skillBonus(n,name){
+  var s = SKILLS.filter(function(x){ return x[0]===name; })[0]; if(!s) return null;
+  var m = mod((n.stats||{})[s[1]]); if(m==null) return null;
+  return m + ((n.skills||[]).indexOf(name)>-1 ? (numOf(n.cr)||0) : 0);
+}
+function passiveOf(n){ var b = skillBonus(n,'Внимательность (Восприятие)'); return b==null ? null : 10+b; }
+function skillsLine(n){ return (n.skills||[]).map(function(nm){ var b = skillBonus(n,nm); return b==null ? '' : esc(nm)+' '+fm(b); }).filter(Boolean).join(', '); }
+function docs(sn){ return sn.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; }); }
+function listen(q,cb){ unsubs.push(q.onSnapshot(cb, function(err){ fbErr = err.message; route(); })); }
+function refreshAll(){
+  render();
+  var h = location.hash.slice(1);
+  if(user && !ed && (h.indexOf('npc')===0 || h.indexOf('pcs')===0)) renderNpc(h.split('/'));
+  if(!isGM()) renderQueue();
+  if(user && !editing && /^wiki-/.test(h)) renderDoc();
+}
+function seedLore(){
+  if(!isGM()) return;
+  var old = {}; try{ old = JSON.parse(localStorage.getItem('dnd-lore-v1')||'{}')||{}; }catch(e){}
+  ['ket','imp'].forEach(function(k){ if(LORE[k]==null && old[k]) fdb.collection('lore').doc(k).set({text:old[k]}); });
+}
+function mergeTags(sn){
+  sn.docChanges().forEach(function(ch){
+    if(ch.type!=='added') return;
+    var d = ch.doc.data(), c = find(d.cid);
+    if(c && c.pc && c.active && d.t){
+      var ex = c.tags.filter(function(x){ return x.t===d.t; })[0];
+      if(ex){ ex.note = d.note||''; ex.dur = d.dur; ex.start = S.round; } else c.tags.push({t:d.t, note:d.note||'', dur:d.dur, start:S.round});
+    }
+    ch.doc.ref.delete();
+  });
+  render();
+}
+var pushT = null;
+function pushCombat(){
+  if(!fdb || !isGM()) return;
+  clearTimeout(pushT);
+  pushT = setTimeout(function(){
+    var data = {round:S.round, turn:S.turn||'', creatures:S.creatures.filter(function(c){ return c.active; }).map(function(c){
+      return {id:c.id, name:c.name, pc:!!c.pc, init:(c.init===''||c.init==null)?'':+c.init, tags:c.pc ? c.tags.map(function(t){ return {t:t.t, note:t.note||'', dur:t.dur==null?'':t.dur, start:t.start==null?0:t.start}; }) : []};
+    })};
+    fdb.collection('combat').doc('state').set(data).catch(function(){});
+  }, 600);
+}
 
 try{
   firebase.initializeApp(FBCFG);
   fauth = firebase.auth(); fdb = firebase.firestore();
   fdb.enablePersistence({synchronizeTabs:true}).catch(function(){});
   fauth.onAuthStateChanged(function(u){
-    user = u; if(unsub){ unsub(); unsub = null; }
-    render();
+    user = u; authReady = true; fbErr = '';
+    unsubs.forEach(function(f){ f(); }); unsubs = [];
+    NPCS = null; PCS = null; COMBAT = null;
+    $('authBox').innerHTML = u ? esc(u.email||'')+' <button class="small" id="logoutBtn">Выйти</button>' : '';
     if(u){
-      unsub = fdb.collection('npcs').onSnapshot(function(sn){
-        NPCS = sn.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; });
-        if(!ed) renderNpc();
-        render();
-      }, function(err){ fbErr = err.message; renderNpc(); });
-    } else { NPCS = null; renderNpc(); }
+      var gm = u.uid===GM_UID;
+      if(gm) listen(fdb.collection('npcs'), function(sn){ NPCS = docs(sn); refreshAll(); });
+      listen(fdb.collection('pcs'), function(sn){ PCS = docs(sn); refreshAll(); });
+      listen(fdb.collection('lore'), function(sn){ LORE = {}; sn.docs.forEach(function(d){ LORE[d.id] = d.data().text; }); seedLore(); refreshAll(); });
+      if(gm) listen(fdb.collection('playerTags'), mergeTags);
+      else listen(fdb.collection('combat'), function(sn){ COMBAT = null; sn.docs.forEach(function(d){ if(d.id==='state') COMBAT = d.data(); }); renderQueue(); });
+    }
+    render(); route();
   });
-}catch(e){ fbErr = String(e); }
+}catch(e){ fbErr = String(e); authReady = true; }
+
+function renderLogin(msg){
+  var R = $('loginRoot');
+  if(fbErr && msg!=='load'){ R.innerHTML = '<h1>Нет связи с базой</h1><p class="note">'+esc(fbErr)+'</p>'; return; }
+  if(msg==='load') R.innerHTML = '<p class="note">Загрузка…</p>';
+  else if(msg==='gm') R.innerHTML = '<h1>Только для мастера</h1><p class="note">Эта страница доступна только мастеру. <a href="#menu" style="color:var(--pc)">В меню</a></p>';
+  else R.innerHTML = '<h1>Вход</h1><p class="note">Вход для мастера и игроков.</p><div class="blk" style="max-width:420px"><label>Почта</label><input id="lgE" type="email" autocomplete="username" style="width:100%"><label>Пароль</label><input id="lgP" type="password" autocomplete="current-password" style="width:100%"><p id="lgM" class="note"></p><button class="bigY" data-a="login">Войти</button></div>';
+}
+function doLogin(){ fauth.signInWithEmailAndPassword($('lgE').value.trim(), $('lgP').value).catch(function(err){ $('lgM').textContent = 'Не удалось войти: '+err.message; }); }
+$('loginRoot').addEventListener('click', function(e){ if(e.target.dataset.a==='login') doLogin(); });
+$('loginRoot').addEventListener('keydown', function(e){ if(e.key==='Enter' && e.target.id==='lgP') doLogin(); });
+$('authBox').addEventListener('click', function(e){ if(e.target.id==='logoutBtn' && fauth) fauth.signOut(); });
+
+function renderQueue(){
+  if(!$('qList')) return;
+  if(!COMBAT){ $('qList').innerHTML = ''; $('qEmpty').textContent = 'Мастер ещё не начал бой.'; $('qRound').textContent = '—'; return; }
+  $('qEmpty').textContent = ''; $('qRound').textContent = COMBAT.round;
+  var cr = COMBAT.creatures||[];
+  $('qList').innerHTML = cr.map(function(c){
+    return '<li class="row'+(c.pc?'':' npc')+(COMBAT.turn===c.id?' current':'')+'"><span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small></span><b style="font-size:22px;text-align:center">'+(c.init===''?'—':esc(c.init))+'</b><div class="tags qt">'+(c.tags||[]).map(function(t,i){ return tagHTML(t,i,COMBAT.round,true); }).join('')+'</div></li>';
+  }).join('');
+  var pcs = cr.filter(function(c){ return c.pc; }), sig = pcs.map(function(c){ return c.id; }).join();
+  if(sig!==qSig){ qSig = sig; var cur = $('qWho').value; $('qWho').innerHTML = pcs.map(function(c){ return '<option value="'+escA(c.id)+'">'+esc(c.name)+'</option>'; }).join(''); if(cur) $('qWho').value = cur; }
+}
+setupAC($('qCond'), $('qCondList'), BASE, function(){ $('qNote').focus(); });
+setupAC($('qNote'), $('qNoteList'), NOTES, function(){ $('qApply').click(); });
+$('qApply').onclick = function(){
+  var cid = $('qWho').value, t = $('qCond').value.trim(); if(!cid || !t || !fdb) return;
+  var dv = $('qDur').value;
+  fdb.collection('playerTags').add({cid:cid, t:t, note:$('qNote').value.trim(), dur:dv==='inf' ? 'inf' : +dv, by:(user&&user.email)||''})
+    .then(function(){ $('qMsg').textContent = 'Отправлено мастеру.'; }).catch(function(err){ $('qMsg').textContent = 'Не отправилось: '+err.message; });
+  $('qCond').value = ''; $('qNote').value = ''; $('qDur').value = 'inf';
+};
 
 function renderNpc(parts){
   if(parts) npcParts = parts;
-  var R = $('npcRoot'), p = npcParts;
-  if(typeof firebase==='undefined' || fbErr){ R.innerHTML = '<h1>NPC</h1><p class="note">Не удалось подключиться к базе: '+esc(fbErr||'нет связи с Firebase')+'</p>'; return; }
-  if(!user){ ed = null; R.innerHTML = '<h1>NPC</h1><p class="note">Вход только для мастера.</p><div class="blk"><label>Почта</label><input id="lgE" type="email" autocomplete="username"><label>Пароль</label><input id="lgP" type="password" autocomplete="current-password"><p id="lgM" class="note"></p><button class="bigY" data-a="login">Войти</button></div>'; return; }
-  if(NPCS==null){ R.innerHTML = '<p class="note">Загрузка…</p>'; return; }
+  var p = npcParts; cx = p[0]==='pcs' ? KINDS.pcs : KINDS.npc; HK = cx.h;
+  var R = $(cx.root), D = kdata();
+  if(!user || typeof firebase==='undefined') return;
+  if(fbErr){ R.innerHTML = '<h1>'+cx.title+'</h1><p class="note">Нет доступа к базе: '+esc(fbErr)+'</p>'; return; }
+  if(D==null){ R.innerHTML = '<p class="note">Загрузка…</p>'; return; }
   if(!p[1]){ ed = null; R.innerHTML = listHTML(); return; }
   if(p[1]==='new'){ if(!ed){ ed = blank(); edId = null; } R.innerHTML = formHTML(); return; }
-  var n = NPCS.filter(function(x){ return x.id===p[1]; })[0];
-  if(!n){ R.innerHTML = '<p class="note">NPC не найден. <a href="#npc">К списку</a></p>'; return; }
-  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = JSON.parse(JSON.stringify(n)); edId = n.id; } R.innerHTML = formHTML(); }
+  var n = D.filter(function(x){ return x.id===p[1]; })[0];
+  if(!n){ R.innerHTML = '<p class="note">Не найдено. <a href="#'+HK+'" style="color:var(--pc)">К списку</a></p>'; return; }
+  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = Object.assign(blank(), JSON.parse(JSON.stringify(n))); edId = n.id; } R.innerHTML = formHTML(); }
   else { ed = null; R.innerHTML = sheetHTML(n); }
 }
 
 function listRows(){
   var q = (window.npcQ||'').toLowerCase();
-  return NPCS.filter(function(n){ return (n.name||'').toLowerCase().indexOf(q)>-1; })
+  return kdata().filter(function(n){ return (n.name||'').toLowerCase().indexOf(q)>-1; })
     .sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); })
-    .map(function(n){ return '<li class="row npc" style="grid-template-columns:1fr auto"><span class="name"><a href="#npc/'+n.id+'" style="color:var(--text)">'+esc(n.name||'Без имени')+'</a>'+(n.cr?'<small>БМ '+esc(n.cr)+'</small>':'')+'</span><a class="btn" href="#npc/'+n.id+'/edit">Редактировать</a></li>'; }).join('')
+    .map(function(n){ return '<li class="row npc" style="grid-template-columns:1fr auto"><span class="name"><a href="#'+HK+'/'+n.id+'" style="color:var(--text)">'+esc(n.name||'Без имени')+'</a>'+(n.cr?'<small>БМ '+esc(n.cr)+'</small>':'')+'</span><a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a></li>'; }).join('')
     || '<li class="empty">Ничего нет. Нажмите «Создать NPC».</li>';
 }
 function listHTML(){
-  return '<div class="bar" style="justify-content:space-between;margin-bottom:12px"><h1>NPC</h1><div class="bar"><input id="npcQ" placeholder="Поиск" value="'+escA(window.npcQ||'')+'"><a class="btn bigY" href="#npc/new">Создать NPC</a><button class="small" data-a="logout">Выйти</button></div></div><ul id="npcUl">'+listRows()+'</ul>';
+  return '<div class="bar" style="justify-content:space-between;margin-bottom:12px"><h1>'+cx.title+'</h1><div class="bar"><input id="npcQ" placeholder="Поиск" value="'+escA(window.npcQ||'')+'"><a class="btn bigY" href="#'+HK+'/new">'+(HK==='pcs'?'Создать персонажа':'Создать NPC')+'</a></div></div><ul id="npcUl">'+listRows()+'</ul>';
 }
 
 function sheetHTML(n){
   var st = n.stats||{}, h = '', pb = numOf(n.cr)||0;
-  h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#npc">К списку</a><a class="btn" href="#npc/'+n.id+'/edit">Редактировать</a></div></div>';
-  h += '<div class="bigstats"><div><span>БМ</span><b>'+dash(n.cr)+'</b></div><div><span>КД</span><b>'+dash(n.ac)+'</b></div><div><span>ХП</span><b>'+dash(n.hp)+'</b></div></div>';
+  h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#'+HK+'">К списку</a><a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a></div></div>';
+  h += '<div class="bigstats"><div><span>БМ</span><b>'+dash(n.cr)+'</b></div><div><span>КД</span><b>'+dash(n.ac)+'</b></div><div><span>П. вним.</span><b>'+dash(passiveOf(n))+'</b></div><div><span>ХП</span><b>'+dash(n.hp)+'</b></div></div>';
   h += '<table class="st"><tr><td></td>'+STATS.map(function(s){ return '<td><b>'+s[1]+'</b></td>'; }).join('')+'</tr><tr><td>Знач.</td>'+STATS.map(function(s){ return '<td>'+dash(st[s[0]])+'</td>'; }).join('')+'</tr><tr><td>Мод.</td>'+STATS.map(function(s){ return '<td>'+fm(mod(st[s[0]]))+'</td>'; }).join('')+'</tr></table>';
   var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return s[1]+' '+fm(plus(mod(st[k]),pb)); });
   if(sv.length) h += '<p><b>Спасброски:</b> '+sv.join(', ')+'</p>';
@@ -665,7 +785,7 @@ function sheetHTML(n){
   LISTS.forEach(function(l){ if((n[l[0]]||[]).length) h += '<p><b>'+l[1]+':</b> '+n[l[0]].map(esc).join(', ')+'</p>'; });
   if(n.mage){
     var rows = ''; for(var l=1;l<=9;l++){ var c = (n.slots||{})[l]||0; if(c) rows += '<tr><td>'+l+'</td><td>'+new Array(c+1).join('<span class="slot"></span>')+'</td></tr>'; }
-    h += '<div class="blk"><b>Ячейки заклинаний</b><table class="st"><tr><td>Ур. ячейки</td><td>Ячейки</td></tr>'+(rows||'<tr><td colspan="2" class="note">Не настроены</td></tr>')+'</table></div>';
+    h += '<div class="blk"><b>Ячейки заклинаний</b> <span class="note">СЛ спасброска: '+dash(n.dc)+'</span><table class="st"><tr><td>Ур. ячейки</td><td>Ячейки</td></tr>'+(rows||'<tr><td colspan="2" class="note">Не настроены</td></tr>')+'</table></div>';
   }
   if(n.desc) h += '<div class="blk"><b>Описание</b><p style="white-space:pre-wrap">'+esc(n.desc)+'</p></div>';
   (n.abilities||[]).forEach(function(a){
@@ -680,12 +800,12 @@ function chip(path,v,label,on){ return '<button type="button" class="chip'+(on?'
 function mspan(k,on){ var m = mod((ed.stats||{})[k]); if(on && m!=null) m += (numOf(ed.cr)||0); return '<span data-mod="'+k+'">'+fm(m)+'</span>'; }
 function formHTML(){
   var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?'Редактирование NPC':'Новый NPC')+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
-  h += F('name','Имя',e.name)+'<div class="grid" style="grid-template-columns:repeat(3,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+F('hp','max ХП',e.hp,'big')+'</div>';
+  h += F('name','Имя',e.name)+'<div class="grid" style="grid-template-columns:repeat(4,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+'<div class="fld"><label>П. вним.</label><div class="big pvbox" id="pvv">'+(passiveOf(e)==null?'—':passiveOf(e))+'</div></div>'+F('hp','max ХП',e.hp,'big')+'</div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="mage" data-re="1" style="width:auto"'+(e.mage?' checked':'')+'> Маг</label></div>';
   if(e.mage){
     h += '<div class="blk"><b>Ячейки заклинаний</b><div class="grid" style="margin-top:8px">';
     for(var l=1;l<=9;l++){ h += '<div><label>Уровень '+l+'</label><select data-p="slots.'+l+'" data-num="1">'+[0,1,2,3,4].map(function(c){ return '<option value="'+c+'"'+(((e.slots||{})[l]||0)===c?' selected':'')+'>'+(c||'нет')+'</option>'; }).join('')+'</select></div>'; }
-    h += '</div></div>';
+    h += '</div>'+F('dc','СЛ спасброска от заклинаний',e.dc)+'</div>';
   }
   h += '<div class="blk"><b>Характеристики</b><table class="st"><tr><td></td><td>Значение</td><td>Модификатор</td></tr>'+STATS.map(function(s){ return '<tr><td>'+s[1]+'</td><td><input data-p="stats.'+s[0]+'" data-num="1" style="width:80px" value="'+escA((e.stats||{})[s[0]]==null?'':e.stats[s[0]])+'"></td><td>'+mspan(s[0])+'</td></tr>'; }).join('')+'</table></div>';
   h += '<div class="fld"><label>Спасброски</label><div class="chips">'+STATS.map(function(s){ return chip('saves',s[0],s[1]+' '+mspan(s[0],(e.saves||[]).indexOf(s[0])>-1),(e.saves||[]).indexOf(s[0])>-1); }).join('')+'</div></div>';
@@ -709,8 +829,7 @@ function formHTML(){
   return h;
 }
 
-(function(){
-  var R = $('npcRoot');
+function bindSheet(R){
   function again(){ renderNpc(); }
   function refreshMods(){
     var pb = numOf(ed.cr)||0;
@@ -719,6 +838,7 @@ function formHTML(){
       if(c && c.classList.contains('on') && m!=null) m += pb;
       x.textContent = fm(m);
     });
+    var pv = R.querySelector('#pvv'); if(pv){ var pp = passiveOf(ed); pv.textContent = pp==null ? '—' : pp; }
   }
   function login(){
     fauth.signInWithEmailAndPassword($('lgE').value.trim(), $('lgP').value).catch(function(err){ $('lgM').textContent = 'Не удалось войти: '+err.message; });
@@ -757,22 +877,23 @@ function formHTML(){
     else if(a==='addAt'){ ed.attacks.push({name:'',hit:'',text:''}); again(); }
     else if(a==='rmAt'){ ed.attacks.splice(i,1); again(); }
     else if(a==='rmTag'){ ed[b.dataset.k].splice(i,1); again(); }
-    else if(a==='cancel'){ var id = edId; ed = null; location.hash = id ? '#npc/'+id : '#npc'; }
+    else if(a==='cancel'){ var id = edId; ed = null; location.hash = id ? '#'+HK+'/'+id : '#'+HK; }
     else if(a==='del'){
       if(!confirm('Удалить этого NPC насовсем?')) return;
-      fdb.collection('npcs').doc(edId).delete().catch(function(err){ alert('Не удалилось: '+err.message); });
-      ed = null; location.hash = '#npc';
+      fdb.collection(cx.col).doc(edId).delete().catch(function(err){ alert('Не удалилось: '+err.message); });
+      ed = null; location.hash = '#'+HK;
     }
     else if(a==='save'){
       if(!ed.name.trim()){ alert('Впишите имя'); return; }
       var data = JSON.parse(JSON.stringify(ed)); delete data.id;
-      var ref = edId ? fdb.collection('npcs').doc(edId) : fdb.collection('npcs').doc();
+      var ref = edId ? fdb.collection(cx.col).doc(edId) : fdb.collection(cx.col).doc();
       ref.set(data).catch(function(err){ alert('Не сохранилось: '+err.message); });
-      ed = null; location.hash = '#npc/'+ref.id; renderNpc(['npc',ref.id]);
+      ed = null; location.hash = '#'+HK+'/'+ref.id; renderNpc([HK,ref.id]);
     }
   });
-})();
-if(location.hash.indexOf('#npc')===0) renderNpc(location.hash.slice(1).split('/'));
+}
+bindSheet($('npcRoot')); bindSheet($('pcRoot'));
+route();
 </script>
 <script>
 if('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
