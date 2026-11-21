@@ -164,7 +164,6 @@ span.tag{display:inline-block}
   <a href="#tracker" data-n="tracker">Бой</a>
   <a href="#npc" data-n="npc" class="gm-only">NPC</a>
   <a href="#pcs" data-n="pcs">Персонажи</a>
-  <a href="#cities" data-n="cities">Города</a>
   <span class="authbox" id="authBox"></span>
 </nav>
 <div class="view" id="v-menu">
@@ -173,7 +172,6 @@ span.tag{display:inline-block}
     <a class="card" href="#tracker"><h2>Бой</h2><p>Очередь ходов и состояния существ</p></a>
     <a class="card gm-only" href="#npc"><h2>NPC</h2><p>База неписей: только для мастера</p></a>
     <a class="card" href="#pcs"><h2>Игровые персонажи</h2><p>Листы персонажей игроков</p></a>
-    <a class="card" href="#cities"><h2>Города</h2><p>Карта мест кампании</p></a>
   </div>
 </div>
 <div class="view" id="v-lore">
@@ -204,7 +202,6 @@ span.tag{display:inline-block}
 </div>
 <div class="view" id="v-npc"><div class="npcwrap" id="npcRoot"></div></div>
 <div class="view" id="v-pcs"><div class="npcwrap" id="pcRoot"></div></div>
-<div class="view" id="v-cities"><iframe id="citiesFrame" title="Карта мест кампании" style="display:block;width:100%;height:calc(100vh - 110px);min-height:600px;border:0;background:#f6f1e7"></iframe></div>
 <div class="view" id="v-login"><div class="npcwrap" id="loginRoot"></div></div>
 <div class="view" id="v-queue"><div class="npcwrap">
   <div class="bar" style="justify-content:space-between"><h1>Бой</h1><span class="round">Раунд <b id="qRound">—</b></span></div>
@@ -376,7 +373,7 @@ function render(){
       '<span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small> '+
         '<button class="del" data-act="del" title="'+(c.pc?'Убрать из боя (нет на игре)':'Удалить')+'" aria-label="Убрать">×</button></span>'+
       '<input class="init" type="number" data-act="init" value="'+esc(String(c.init))+'" placeholder="—" aria-label="Инициатива">'+
-      '<div class="tags">'+c.tags.map(tagHTML).join('')+'</div>'+extraHTML(c)+
+      '<div class="tags">'+c.tags.map(function(t,i){ return tagHTML(t,i); }).join('')+'</div>'+extraHTML(c)+
     '</li>';
   }).join('');
   $('list').innerHTML = html || '<li class="empty">Список пуст</li>';
@@ -654,24 +651,21 @@ $('wImport').onchange = function(e){
   r.readAsText(f); e.target.value = '';
 };
 
-var CITIES_HTML = "\u003c!DOCTYPE html\u003e\n\u003chtml lang=\"ru\"\u003e\n\u003chead\u003e\n\u003cmeta charset=\"utf-8\"\u003e\n\u003cmeta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"\u003e\n\u003ctitle\u003eКарта мест кампании\u003c/title\u003e\n\u003cstyle\u003e\n:root{--bg:#f6f1e7;--fg:#2b2418;--box-sizing:border-box;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}\n@media (prefers-color-scheme:dark){:root:not([data-theme=\"light\"]){--bg:#1d1a15;--fg:#eee6d6}}\n:root[data-theme=\"dark\"]{--bg:#1d1a15;--fg:#eee6d6}\nhtml{scroll-padding-top:env(safe-area-inset-top,0px)}\nbody{margin:0;padding:24px 16px;background:var(--bg);color:var(--fg);font-family:Georgia,'Times New Roman',serif}\nh1{text-align:center;margin:0 0 24px;font-weight:normal;letter-spacing:.05em}\nh2{margin:32px 0 8px;font-weight:normal;font-size:30px;text-align:center;color:hsl(var(--h) 50% 45%)}\n.wrap{overflow-x:auto;border:1px dashed hsl(var(--h) 35% 50% / .6);border-radius:16px}\n.canvas{position:relative;margin:0 auto}\n.p{position:absolute;box-sizing:border-box;text-align:center;border-radius:50%;padding:.55em 1.5em;max-width:250px;line-height:1.15;\n border:2px solid hsl(var(--h) 45% 45%);background:color-mix(in srgb,hsl(var(--h) 60% 50%) 15%,var(--bg))}\n.p small{display:block;font-size:.62em;opacity:.8;margin-top:.25em;line-height:1.2}\n\u003c/style\u003e\n\u003c/head\u003e\n\u003cbody\u003e\n\u003ch1\u003eКарта мест кампании\u003c/h1\u003e\n\u003cdiv id=\"root\"\u003e\u003c/div\u003e\n\u003cscript\u003e\nconst DATA=`Салташ\n1 Бордель «Сестра песков» (управляющий Хайр)\n2 Дом Саэлиса\n   3 Лаборатория Саэлиса\n2 Храм Пилора (под ним нашли Архимана)\n2 Цитадель\n2 Порт\n\nДалташ\n1 Таверна «Красный погреб»\n   2 Ямы (арена)\n3 Цитадель\n   4 Дом госпожи Восс\n4 Ресторан «Золотой лебедь» (Дариан встречался с госпожой Восс)\n1 Таверна «Морская крыса» (Звейх)\n2 Таверна «Память кетов» (им управляет «Мама», т.е. семья Арин)\n3 Особняк Кардуса Нарвеля (волеизъявитель)\n1 Особняк лорда Верена Талрикса (наместника)\n4 Дом Кессов\n4 Особняк Ридов\n3 Центральный рынок\n3 Кетский рынок\n3 Порт\n   4 Таверна без вывески в порту с доской объявлений\n2 Гостиница «Красная дева» (жил Рожер)\n\nВигрейд\n2 Таверна «Полуночный соблазн»\n1 Особняк Моренвейн в городе\n   4 Особняк Моренвейн за городом\n4 Особняк Лоренн за городом\n1 Особняк Эллиасии Соулбрайт за городом\n1 Академия Штормов\n   2 Лаборатория Эллен и Дандара\n   3 Архив\n      2 Спираль\n   4 Сад Пилора перед Академией\n      5 Перевал самоубийц\n2 Центральный рынок «Солнечная площадь»\n   3 Таверна «Покинутый пёс» где встретили Лиора\n1 Постоялый двор в Люцерском стане (особняк где проходило собрание) (там же дырка на эфир)\n3 Заброшенный склад (там происходило кровавое месиво с дозволениями)\n2 Заброшенная дозорная башня в порту\n\nМёртон\n1 Особняк Ридов\n1 Особняк Моренвилей\n\nНулургард\n2 Хлев с дыркой в эфир\n1 Швейная «Лунное плетение»\n2 Закрытый город (при входе)\n   1 Особняк первого советника (Лукрена Моренвиля)`;\n\nconst SIZE={1:29,2:25,3:21,4:18,5:15}, HUES=[38,0,215,280,150];\nconst cities=[];\nfor(const line of DATA.split('\\n')){\n  if(!line.trim())continue;\n  const m=line.match(/^(\\s*)(\\d+)\\s+(.+)$/);\n  if(!m){cities.push({name:line.trim(),items:[]});continue}\n  const c=cities[cities.length-1],it={ind:m[1].length,n:+m[2],kids:[],txt:m[3]};\n  for(let i=c.items.length-1;i\u003e=0;i--)if(c.items[i].ind\u003cit.ind){c.items[i].kids.push(it);it.par=c.items[i];break}\n  c.items.push(it);\n}\nconst maxN=i=\u003eMath.max(i.n,...i.kids.map(maxN));\nconst root=document.getElementById('root');\n\ncities.forEach((c,ci)=\u003e{\n  const h=document.createElement('h2');h.textContent=c.name;h.style.setProperty('--h',HUES[ci]);root.appendChild(h);\n  const wrap=document.createElement('div');wrap.className='wrap';wrap.style.setProperty('--h',HUES[ci]);\n  const cv=document.createElement('div');cv.className='canvas';wrap.appendChild(cv);root.appendChild(wrap);\n  const placed=[];\n  const mk=it=\u003e{\n    const el=document.createElement('div');el.className='p';el.style.fontSize=SIZE[it.n]+'px';\n    const k=it.txt.indexOf('(');\n    const name=(k\u003c0?it.txt:it.txt.slice(0,k)).trim(),note=k\u003c0?'':it.txt.slice(k);\n    el.textContent=name;\n    if(note){const s=document.createElement('small');s.textContent=note;el.appendChild(s)}\n    cv.appendChild(el);return el;\n  };\n  const put=(it,ox,oy,r0,a0)=\u003e{\n    const el=mk(it),w=el.offsetWidth,hh=el.offsetHeight;let x=ox,y=oy;\n    for(let t=0;t\u003c5000;t++){\n      const r=r0+t*5,a=a0+t*.45;x=ox+r*Math.cos(a)*1.7;y=oy+r*Math.sin(a);\n      if(!placed.some(p=\u003eMath.abs(p.x-x)\u003c(p.w+w)/2+10\u0026\u0026Math.abs(p.y-y)\u003c(p.h+hh)/2+10))break;\n    }\n    placed.push({x,y,w,h:hh,el});\n    return{x,y};\n  };\n  const roots=c.items.filter(i=\u003e!i.par).sort((a,b)=\u003emaxN(b)-maxN(a));\n  const walk=(it,pos,k)=\u003eit.kids.forEach((kid,j)=\u003e{\n    const p=put(kid,pos.x,pos.y,0,k*1.7+j*2.1);walk(kid,p,k+1);\n  });\n  roots.forEach((it,i)=\u003e{\n    const p=put(it,0,0,(6-maxN(it))*40,i*2.4);walk(it,p,i);\n  });\n  const pad=30;\n  const x0=Math.min(...placed.map(p=\u003ep.x-p.w/2)),x1=Math.max(...placed.map(p=\u003ep.x+p.w/2));\n  const y0=Math.min(...placed.map(p=\u003ep.y-p.h/2)),y1=Math.max(...placed.map(p=\u003ep.y+p.h/2));\n  cv.style.width=(x1-x0+pad*2)+'px';cv.style.height=(y1-y0+pad*2)+'px';\n  placed.forEach(p=\u003e{p.el.style.left=(p.x-p.w/2-x0+pad)+'px';p.el.style.top=(p.y-p.h/2-y0+pad)+'px'});\n});\n\u003c/script\u003e\n\u003c/body\u003e\n\u003c/html\u003e\n";
-function loadCities(){ var f=$('citiesFrame'); if(f && !f.dataset.loaded){ f.srcdoc=CITIES_HTML; f.dataset.loaded='1'; } }
 function route(){
   var h = (location.hash || '#menu').slice(1), v, want, msg = '';
-  if(h==='tracker') v = 'tracker'; else if(h==='lore') v = 'lore'; else if(h==='cities') v = 'cities'; else if(/^wiki-(ket|imp)$/.test(h)) v = 'wiki';
+  if(h==='tracker') v = 'tracker'; else if(h==='lore') v = 'lore'; else if(/^wiki-(ket|imp)$/.test(h)) v = 'wiki';
   else if(h.indexOf('npc')===0) v = 'npc'; else if(h.indexOf('pcs')===0) v = 'pcs'; else v = 'menu';
   want = v;
-  if(v!=='menu' && v!=='cities'){
+  if(v!=='menu'){
     if(typeof authReady==='undefined' || !authReady){ v = 'login'; msg = 'load'; }
     else if(!user){ v = 'login'; msg = 'login'; }
     else if(v==='npc' && !isGM()){ v = 'login'; msg = 'gm'; }
     else if(v==='tracker' && !isGM()) v = 'queue';
   }
-  ['menu','lore','wiki','npc','pcs','cities','tracker','queue','login'].forEach(function(id){ $('v-'+id).classList.toggle('on', id===v); });
+  ['menu','lore','wiki','npc','pcs','tracker','queue','login'].forEach(function(id){ $('v-'+id).classList.toggle('on', id===v); });
   var nk = want==='wiki' ? 'lore' : want;
   Array.prototype.forEach.call(document.querySelectorAll('nav.top a'), function(a){ a.classList.toggle('on', a.dataset.n===nk); });
   if(v==='wiki') openWiki(h.slice(5));
-  if(v==='cities') loadCities();
   if(v==='npc' || v==='pcs'){ if(typeof renderNpc==='function') renderNpc(h.split('/')); } else ed = null;
   if(v==='queue' && typeof renderQueue==='function') renderQueue();
   if(v==='login' && typeof renderLogin==='function') renderLogin(msg);
