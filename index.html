@@ -347,7 +347,8 @@ function statHTML(c,N){
     ab += '<p style="margin:8px 0 0">'+act+'<b>'+esc(a.name||'Способность')+'</b>'+(a.tr ? ' <span class="note">'+n+' '+period+'</span> '+cells+(a.trp==='round' ? ' <button type="button" class="lockbtn'+(lk?' on':'')+'" data-lock="'+i+'" title="'+(lk?'Заблокировано от автосброса. Нажми, чтобы разблокировать':'Заблокировать от автосброса в начале раунда')+'">'+(lk?'🔒':'🔓')+'</button>' : '') : '')+(a.note ? '<br><span class="note">'+esc(a.note)+'</span>' : '')+'</p>';
   });
   (N.attacks||[]).forEach(function(a){
-    ab += '<p style="margin:8px 0 0"><b>'+esc(a.name||'Атака')+'</b>'+(a.hit ? ' <span class="note">'+esc(a.hit)+'</span>' : '')+(a.note ? '<br><span class="note">'+esc(a.note)+'</span>' : '')+'</p>';
+    var act = a.action ? '<span class="actbadge act-'+escA(a.action)+'">'+({d:'д',bd:'бд',r:'р'}[a.action]||'')+'</span>' : '';
+    ab += '<p style="margin:8px 0 0">'+act+'<b>'+esc(a.name||'Атака')+'</b>'+(a.hit ? ' <span class="note">'+esc(a.hit)+'</span>' : '')+(a.note ? '<br><span class="note">'+esc(a.note)+'</span>' : '')+'</p>';
   });
   if(ab) h += '<hr class="sep">'+ab;
   if((N.lactions||[]).length || numOf(N.la)){
@@ -855,7 +856,7 @@ function renderNpc(parts){
   if(p[1]==='new'){ if(!ed){ ed = blank(); edId = null; } R.innerHTML = formHTML(); return; }
   var n = D.filter(function(x){ return x.id===p[1]; })[0];
   if(!n){ R.innerHTML = '<p class="note">Не найдено. <a href="#'+HK+'" style="color:var(--pc)">К списку</a></p>'; return; }
-  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = Object.assign(blank(), JSON.parse(JSON.stringify(n))); ed.abilities=(ed.abilities||[]).map(function(a){return Object.assign({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''},a);}); ed.attacks=(ed.attacks||[]).map(function(a){return Object.assign({name:'',hit:'',note:'',text:''},a);}); ed.lactions=(ed.lactions||[]).map(function(a){return Object.assign({name:'',cost:1,note:'',text:''},a);}); edId = n.id; } R.innerHTML = formHTML(); }
+  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = Object.assign(blank(), JSON.parse(JSON.stringify(n))); ed.abilities=(ed.abilities||[]).map(function(a){return Object.assign({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''},a);}); ed.attacks=(ed.attacks||[]).map(function(a){return Object.assign({name:'',hit:'',note:'',text:'',action:''},a);}); ed.lactions=(ed.lactions||[]).map(function(a){return Object.assign({name:'',cost:1,note:'',text:''},a);}); edId = n.id; } R.innerHTML = formHTML(); }
   else { ed = null; R.innerHTML = sheetHTML(n); }
 }
 
@@ -889,7 +890,7 @@ function sheetHTML(n){
   (n.abilities||[]).forEach(function(a){
     h += '<div class="blk"><b>'+esc(a.name||'Способность')+'</b>'+(a.tr?' <span class="note">'+a.trn+' '+(a.trp==='round'?'р/раунд':'р/день')+'</span> '+new Array((+a.trn||1)+1).join('<span class="slot"></span>'):'')+(a.rc&&(a.rcv||[]).length?' <span class="note">Перезарядка '+a.rcv.join(', ')+'</span>':'')+(a.note?'<div class="note" style="margin-top:5px">'+esc(a.note)+'</div>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>';
   });
-  (n.attacks||[]).forEach(function(a){ h += '<div class="blk"><b>'+esc(a.name||'Атака')+'</b>'+(a.hit?' <span class="note">на попадание '+esc(a.hit)+'</span>':'')+(a.note?'<div class="note" style="margin-top:5px">'+esc(a.note)+'</div>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>'; });
+  (n.attacks||[]).forEach(function(a){ var act = a.action ? '<span class="actbadge act-'+escA(a.action)+'">'+({d:'д',bd:'бд',r:'р'}[a.action]||'')+'</span>' : ''; h += '<div class="blk">'+act+'<b>'+esc(a.name||'Атака')+'</b>'+(a.hit?' <span class="note">на попадание '+esc(a.hit)+'</span>':'')+(a.note?'<div class="note" style="margin-top:5px">'+esc(a.note)+'</div>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>'; });
   if((n.lactions||[]).length || n.la){
     h += '<div class="blk"><b>Легендарные действия</b> <span class="note">очков ЛД: '+dash(n.la)+'</span>';
     (n.lactions||[]).forEach(function(a){ h += '<div style="margin-top:8px"><b>'+esc(a.name||'Действие')+'</b> <span class="note">стоимость '+(a.cost||1)+'</span>'+(a.note?'<div class="note">'+esc(a.note)+'</div>':'')+(a.text?'<p style="white-space:pre-wrap;margin:4px 0 0">'+esc(a.text)+'</p>':'')+'</div>'; });
@@ -928,7 +929,7 @@ function formHTML(){
   h += '<button data-a="addAb">Добавить способность</button>';
   e.attacks.forEach(function(a,i){
     var P = 'attacks.'+i+'.';
-    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Атака</b><button class="small" data-a="rmAt" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название атаки',a.name)+F(P+'hit','На попадание',a.hit)+'<div class="fld note-field"><label>Краткая заметка</label><textarea data-p="'+P+'note">'+esc(a.note||'')+'</textarea></div><div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
+    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Атака</b><button class="small" data-a="rmAt" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название атаки',a.name)+F(P+'hit','На попадание',a.hit)+'<div class="fld"><label>Тип действия</label><select data-p="'+P+'action"><option value="">—</option><option value="d"'+(a.action==='d'?' selected':'')+'>д — действие</option><option value="bd"'+(a.action==='bd'?' selected':'')+'>бд — бонусное действие</option><option value="r"'+(a.action==='r'?' selected':'')+'>р — реакция</option></select></div><div class="fld note-field"><label>Краткая заметка</label><textarea data-p="'+P+'note">'+esc(a.note||'')+'</textarea></div><div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
   });
   h += ' <button data-a="addAt">Добавить атаку</button>';
   h += '<div class="blk"><b>Легендарные действия</b><div class="fld"><label>Очков ЛД в пуле (обновляется в начале хода непися)</label><input type="number" min="0" data-p="la" data-num="1" style="width:120px" value="'+escA(e.la==null?'':e.la)+'"></div>';
@@ -988,7 +989,7 @@ function bindSheet(R){
     else if(a==='logout') fauth.signOut();
     else if(a==='addAb'){ ed.abilities.push({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''}); again(); }
     else if(a==='rmAb'){ ed.abilities.splice(i,1); again(); }
-    else if(a==='addAt'){ ed.attacks.push({name:'',hit:'',note:'',text:''}); again(); }
+    else if(a==='addAt'){ ed.attacks.push({name:'',hit:'',note:'',text:'',action:''}); again(); }
     else if(a==='rmAt'){ ed.attacks.splice(i,1); again(); }
     else if(a==='addLa'){ (ed.lactions = ed.lactions||[]).push({name:'',cost:1,note:'',text:''}); again(); }
     else if(a==='rmLa'){ ed.lactions.splice(i,1); again(); }
