@@ -146,7 +146,7 @@ span.tag{display:inline-block}
 .hpcell.cur input{color:var(--pc)}.hpcell.dmg input{color:var(--npc);font-size:20px;line-height:1.3}
 .hpbar{grid-column:1 / -1;height:6px;border-radius:99px;background:var(--panel2);overflow:hidden}
 .hpbar i{display:block;height:100%;border-radius:99px;transition:width .25s,background .25s}
-.ministats{display:flex;gap:6px;margin:6px 0}
+.npc-mini{width:30px;height:30px;object-fit:cover;border-radius:50%;border:1px solid var(--brass);vertical-align:middle;margin-right:7px;background:var(--panel)}.npc-sheet-image{display:block;width:150px;height:150px;object-fit:cover;border-radius:12px;border:1px solid var(--line);margin:10px 0}.ministats{display:flex;gap:6px;margin:6px 0}
 .ministats div{flex:1;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px 4px}
 .ministats span{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .ministats b{font-size:15px;color:var(--brass)}.spellmini{display:block;font-size:10px;line-height:1.2;color:var(--muted);margin-top:2px}
@@ -161,7 +161,7 @@ span.tag{display:inline-block}
 .spl{margin-top:3px}.spl-a{display:inline-block;margin:2px 4px 2px 0;padding:1px 9px;border:1px solid var(--line);border-radius:99px;font-size:13px;color:var(--text);text-decoration:none}
 a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
 
-.token-page{display:grid;grid-template-columns:minmax(280px,1fr) minmax(300px,1fr);gap:18px;padding:18px;max-width:1200px;margin:0 auto}.token-panel,.token-preview-panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}.token-help{color:var(--muted);font-size:14px}.token-upload{display:inline-block;margin:8px 0 14px;background:var(--brass);color:#1d1508;font-weight:700;padding:10px 14px;border-radius:7px;cursor:pointer}.token-upload input{display:none}.token-controls{display:grid;gap:12px}.token-controls label{display:grid;gap:6px;font-size:14px}.token-controls select{width:100%}.token-controls input[type=range]{width:100%;accent-color:var(--brass)}.token-controls button{width:100%}.token-stage{width:min(100%,420px);aspect-ratio:1;position:relative;margin:0 auto;display:grid;place-items:center;background:repeating-conic-gradient(#2c2539 0% 25%,#231d2e 0% 50%) 0 0/24px 24px;border-radius:10px;overflow:hidden}.token-stage canvas{width:100%;height:100%;touch-action:none;cursor:grab}.token-stage canvas:active{cursor:grabbing}.token-stage #tokenPlaceholder{position:absolute;text-align:center;color:var(--muted);pointer-events:none}.token-stage.has-image #tokenPlaceholder{display:none}
+.token-page{display:grid;grid-template-columns:minmax(280px,1fr) minmax(300px,1fr);gap:18px;padding:18px;max-width:1200px;margin:0 auto}.token-panel,.token-preview-panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}.token-help{color:var(--muted);font-size:14px}.token-upload{display:inline-block;margin:8px 0 14px;background:var(--brass);color:#1d1508;font-weight:700;padding:10px 14px;border-radius:7px;cursor:pointer}.token-upload input{display:none}.token-controls{display:grid;gap:12px}.token-controls label{display:grid;gap:6px;font-size:14px}.token-controls select{width:100%}.token-controls input[type=range]{width:100%;accent-color:var(--brass)}.token-controls button{width:100%}.token-attach{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.token-attach select,.token-attach button{width:100%;margin-top:8px}.token-stage{width:min(100%,420px);aspect-ratio:1;position:relative;margin:0 auto;display:grid;place-items:center;background:repeating-conic-gradient(#2c2539 0% 25%,#231d2e 0% 50%) 0 0/24px 24px;border-radius:10px;overflow:hidden}.token-stage canvas{width:100%;height:100%;touch-action:none;cursor:grab}.token-stage canvas:active{cursor:grabbing}.token-stage #tokenPlaceholder{position:absolute;text-align:center;color:var(--muted);pointer-events:none}.token-stage.has-image #tokenPlaceholder{display:none}
 @media(max-width:760px){.token-page{grid-template-columns:1fr;padding:12px}.token-panel,.token-preview-panel{padding:14px}}
 </style>
 </head>
@@ -232,6 +232,7 @@ a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
         </label>
         <button id="tokenReset" type="button" disabled>Сбросить положение</button>
         <button id="tokenDownload" class="primary" type="button" disabled>Скачать PNG</button>
+        <div class="token-attach gm-only"><label>Прикрепить токен к NPC<select id="tokenNpcSelect"><option value="">Загрузка списка NPC…</option></select></label><button id="tokenAttach" type="button" disabled>Прикрепить текущий токен</button><p id="tokenAttachMsg" class="token-help"></p></div>
       </div>
     </section>
     <section class="token-preview-panel">
@@ -370,7 +371,7 @@ function hpColor(p){ return p>50 ? 'var(--pc)' : p>25 ? 'var(--brass)' : 'var(--
 function spellInfo(N){ var parts=[]; if(N.showSpellInfo || N.mage){ if(N.dc!==''&&N.dc!=null) parts.push('<span>СЛ закл. <b>'+esc(N.dc)+'</b></span>'); if(N.spellAtk!==''&&N.spellAtk!=null) parts.push('<span>Мод. атаки закл. <b>'+esc(N.spellAtk)+'</b></span>'); } return parts.join(''); }
 function statHTML(c,N){
   var u = c.used || (c.used = {a:{},s:{}}), mx = numOf(N.hp);
-  var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700" title="Открыть лист непися">'+esc(c.name)+'</a><div class="hpbox"><div class="hpcell"><span>Max ХП</span><b>'+(mx==null?'—':mx)+'</b></div><div class="hpcell cur"><span>Текущие ХП</span><input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></div><div class="hpcell dmg"><span>Урон</span><input class="damage" type="number" data-act="dmg" placeholder="0"></div><div class="hpbar"><i data-hpbar="'+c.id+'" style="width:'+hpPct(c.hp,mx)+'%;background:'+hpColor(hpPct(c.hp,mx))+'"></i></div></div><div class="ministats"><div><span>КД</span><b>'+esc(N.ac||'—')+'</b></div><div><span>БМ</span><b>'+dashS(N.cr)+'</b>'+''+'</div><div><span>П. вним.</span><b>'+dashS(passiveOf(N))+'</b></div></div>';
+  var avatar=N.tokenImage||N.image||''; var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700;display:flex;align-items:center" title="Открыть лист непися">'+(avatar?'<img class="npc-mini" src="'+escA(avatar)+'">':'')+esc(c.name)+'</a><div class="hpbox"><div class="hpcell"><span>Max ХП</span><b>'+(mx==null?'—':mx)+'</b></div><div class="hpcell cur"><span>Текущие ХП</span><input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></div><div class="hpcell dmg"><span>Урон</span><input class="damage" type="number" data-act="dmg" placeholder="0"></div><div class="hpbar"><i data-hpbar="'+c.id+'" style="width:'+hpPct(c.hp,mx)+'%;background:'+hpColor(hpPct(c.hp,mx))+'"></i></div></div><div class="ministats"><div><span>КД</span><b>'+esc(N.ac||'—')+'</b></div><div><span>БМ</span><b>'+dashS(N.cr)+'</b>'+''+'</div><div><span>П. вним.</span><b>'+dashS(passiveOf(N))+'</b></div></div>';
   var sk = skillsLine(N); var sv = (N.saves||[]).map(function(k){ var st=STATS.filter(function(x){return x[0]===k;})[0]; return (st?st[1]:k.toUpperCase())+' '+fm(plus(mod((N.stats||{})[k]),numOf(N.cr)||0)); });
   if(sv.length) h += '<p style="margin:8px 0 0"><b>Спасброски:</b> '+sv.join(', ')+'</p>';
   if(sk) h += '<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>';
@@ -765,7 +766,7 @@ function mod(v){ return (v===''||v==null||isNaN(v)) ? null : Math.floor((+v-10)/
 function plus(m,b){ return m==null ? null : m+b; }
 function fm(n){ return n==null ? '—' : (n>=0 ? '+'+n : ''+n); }
 function dash(x){ return (x==null||x==='') ? '—' : esc(x); }
-function blank(){ return {name:'',cr:'',mage:false,dc:'',spellAtk:'',showSpellInfo:false,la:'',lactions:[],spells:{},slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[]}; }
+function blank(){ return {name:'',cr:'',mage:false,dc:'',spellAtk:'',showSpellInfo:false,la:'',lactions:[],spells:{},slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[],image:'',tokenImage:''}; }
 function setP(path,val){ var k = path.split('.'), o = ed; for(var i=0;i<k.length-1;i++){ if(o[k[i]]==null) o[k[i]] = {}; o = o[k[i]]; } o[k[k.length-1]] = val; }
 function getP(path){ return path.split('.').reduce(function(o,k){ return o==null ? o : o[k]; }, ed); }
 function skillBonus(n,name){
@@ -786,6 +787,7 @@ function skillsLine(n){ return (n.skills||[]).map(function(nm){ var b = skillBon
 function docs(sn){ return sn.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; }); }
 function listen(q,cb){ unsubs.push(q.onSnapshot(cb, function(err){ fbErr = err.message; route(); })); }
 function refreshAll(){
+  if(window.refreshTokenNpcSelect) window.refreshTokenNpcSelect();
   render();
   var h = location.hash.slice(1);
   if(user && !ed && (h.indexOf('npc')===0 || h.indexOf('pcs')===0)) renderNpc(h.split('/'));
@@ -932,6 +934,7 @@ function listHTML(){
 function sheetHTML(n){
   var st = n.stats||{}, h = '', pb = numOf(n.cr)||0;
   h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#'+HK+'">К списку</a><a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a></div></div>';
+  if(n.tokenImage||n.image) h += '<img class="npc-sheet-image" src="'+escA(n.tokenImage||n.image)+'" alt="'+escA(n.name)+'">';
   h += '<div class="bigstats"><div><span>БМ</span><b>'+dash(n.cr)+'</b></div><div><span>КД</span><b>'+dash(n.ac)+'</b></div><div><span>П. вним.</span><b>'+dash(passiveOf(n))+'</b></div><div><span>ХП</span><b>'+dash(n.hp)+'</b></div></div>';
   h += '<table class="st"><tr><td></td>'+STATS.map(function(s){ return '<td><b>'+s[1]+'</b></td>'; }).join('')+'</tr><tr><td>Знач.</td>'+STATS.map(function(s){ return '<td>'+dash(st[s[0]])+'</td>'; }).join('')+'</tr><tr><td>Мод.</td>'+STATS.map(function(s){ return '<td>'+fm(mod(st[s[0]]))+'</td>'; }).join('')+'</tr></table>';
   var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return (s?s[1]:k.toUpperCase())+' '+fm(plus(mod(st[k]),pb)); });
@@ -961,9 +964,17 @@ function sheetHTML(n){
 function F(path,label,val,cls){ return '<div class="fld"><label>'+label+'</label><input'+(cls?' class="'+cls+'"':'')+' data-p="'+path+'" value="'+escA(val==null?'':val)+'"></div>'; }
 function chip(path,v,label,on){ return '<button type="button" class="chip'+(on?' on':'')+'" data-tg="'+path+'" data-v="'+escA(v)+'">'+label+'</button>'; }
 function mspan(k,on){ var m = mod((ed.stats||{})[k]); if(on && m!=null) m += (numOf(ed.cr)||0); return '<span data-mod="'+k+'">'+fm(m)+'</span>'; }
+function imageFileToData(file,maxDim,quality){
+  return new Promise(function(resolve,reject){
+    if(!file||!file.type||!file.type.startsWith('image/')){reject(new Error('Файл не является изображением'));return;}
+    var url=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){URL.revokeObjectURL(url);var scale=Math.min(1,maxDim/Math.max(im.width,im.height)),w=Math.max(1,Math.round(im.width*scale)),h=Math.max(1,Math.round(im.height*scale)),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0,w,h);resolve(c.toDataURL('image/jpeg',quality||0.82));};
+    im.onerror=function(){URL.revokeObjectURL(url);reject(new Error('Не удалось прочитать изображение'));};im.src=url;
+  });
+}
 function formHTML(){
   var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?'Редактирование NPC':'Новый NPC')+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
-  h += F('name','Имя',e.name)+'<div class="grid" style="grid-template-columns:repeat(4,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+'<div class="fld"><label>П. вним.</label><div class="big pvbox" id="pvv">'+(passiveOf(e)==null?'—':passiveOf(e))+'</div></div>'+F('hp','max ХП',e.hp,'big')+'</div>';
+  h += '<div class="blk"><b>Изображение NPC</b><div class="fld"><label>Загрузить PNG / JPEG</label><input type="file" accept="image/png,image/jpeg,image/webp" data-image-upload="npc"><p class="note">Изображение автоматически уменьшится для хранения. '+((e.image||e.tokenImage)?'<img class="npc-sheet-image" src="'+escA(e.tokenImage||e.image)+'" alt="">':'')+'</p><button type="button" class="small" data-a="clearImage">Удалить изображение</button></div></div>' + F('name','Имя',e.name)+'<div class="grid" style="grid-template-columns:repeat(4,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+'<div class="fld"><label>П. вним.</label><div class="big pvbox" id="pvv">'+(passiveOf(e)==null?'—':passiveOf(e))+'</div></div>'+F('hp','max ХП',e.hp,'big')+'</div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="mage" data-re="1" style="width:auto"'+(e.mage?' checked':'')+'> Маг</label></div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="showSpellInfo" style="width:auto"'+(e.showSpellInfo?' checked':'')+'> Показывать СЛ спасброска и модификатор атаки заклинанием в статблоке</label></div>';
   if(!e.mage){ h += F('dc','СЛ спасброска от заклинаний',e.dc)+F('spellAtk','Мод. атаки закл.',e.spellAtk); }
@@ -1028,7 +1039,7 @@ function bindSheet(R){
     if(e.target.id==='npcQ'){ NQ = e.target.value; var ul = R.querySelector('.nlist'); if(ul) ul.innerHTML = listRows(); return; }
     if(e.target.dataset.p && e.target.type!=='checkbox' && e.target.tagName!=='SELECT') onField(e.target);
   });
-  R.addEventListener('change', function(e){ if(e.target.dataset.p && (e.target.type==='checkbox' || e.target.tagName==='SELECT')) onField(e.target); });
+  R.addEventListener('change', function(e){ if(e.target.dataset.imageUpload==='npc'){ var file=e.target.files&&e.target.files[0]; if(file) imageFileToData(file,420,0.82).then(function(data){ ed.image=data; again(); }).catch(function(err){ alert('Не удалось загрузить изображение: '+err.message); }); return; } if(e.target.dataset.p && (e.target.type==='checkbox' || e.target.tagName==='SELECT')) onField(e.target); });
   R.addEventListener('keydown', function(e){
     if(e.key!=='Enter') return;
     if(e.target.id==='lgP'){ login(); return; }
@@ -1046,6 +1057,7 @@ function bindSheet(R){
     var a = b.dataset.a, i = +b.dataset.i;
     if(a==='login') login();
     else if(a==='logout') fauth.signOut();
+    else if(a==='clearImage'){ ed.image=''; ed.tokenImage=''; again(); }
     else if(a==='addAb'){ ed.abilities.push({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''}); again(); }
     else if(a==='rmAb'){ ed.abilities.splice(i,1); again(); }
     else if(a==='addAt'){ ed.attacks.push({name:'',hit:'',note:'',text:'',action:''}); again(); }
@@ -1097,14 +1109,18 @@ if('serviceWorker' in navigator){ window.addEventListener('load', function(){ na
     for(let i=0;i<8;i++){const a=i*Math.PI/4,r=n*.465,rad=n*.012;const xx=n/2+Math.cos(a)*r, yy=n/2+Math.sin(a)*r;g.fillStyle='#6f4c2c';g.beginPath();g.arc(xx,yy,rad,0,Math.PI*2);g.fill();g.fillStyle='#e8bd76';g.beginPath();g.arc(xx-rad*.22,yy-rad*.22,rad*.52,0,Math.PI*2);g.fill();}
     g.restore();
   }
-  function refresh(){draw(canvas,S);stage.classList.toggle('has-image',!!img);zoom.disabled=!img;reset.disabled=!img;download.disabled=!img;}
+  function refresh(){draw(canvas,S);stage.classList.toggle('has-image',!!img);zoom.disabled=!img;reset.disabled=!img;download.disabled=!img;if(attachBtn)attachBtn.disabled=!img||!npcSelect||!npcSelect.value;}
   file.addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(!f.type.startsWith('image/')){alert('Выбери файл изображения.');return;}const url=URL.createObjectURL(f),im=new Image();im.onload=()=>{if(img&&img.src&&img.src.startsWith('blob:'))URL.revokeObjectURL(img.src);img=im;base=Math.max(S/im.width,S/im.height);scale=1;dx=dy=0;zoom.value='1';refresh();};im.onerror=()=>alert('Не удалось открыть изображение.');im.src=url;});
   zoom.addEventListener('input',()=>{scale=Number(zoom.value);refresh();});
   reset.addEventListener('click',()=>{scale=1;dx=dy=0;zoom.value='1';refresh();});
   canvas.addEventListener('pointerdown',e=>{if(!img)return;drag={x:e.clientX,y:e.clientY,dx,dy};canvas.setPointerCapture(e.pointerId)});
   canvas.addEventListener('pointermove',e=>{if(!drag)return;const rect=canvas.getBoundingClientRect(),k=S/rect.width;dx=drag.dx+(e.clientX-drag.x)*k;dy=drag.dy+(e.clientY-drag.y)*k;refresh();});
   canvas.addEventListener('pointerup',()=>drag=null);canvas.addEventListener('pointercancel',()=>drag=null);
-  download.addEventListener('click',()=>{if(!img)return;const n=Number(size.value),out=document.createElement('canvas');out.width=out.height=n;draw(out,n);out.toBlob(async blob=>{if(!blob)return;const raw=new Uint8Array(await blob.arrayBuffer());const phys=new Uint8Array(9);const ppm=11811;phys[0]=(ppm>>>24)&255;phys[1]=(ppm>>>16)&255;phys[2]=(ppm>>>8)&255;phys[3]=ppm&255;phys[4]=(ppm>>>24)&255;phys[5]=(ppm>>>16)&255;phys[6]=(ppm>>>8)&255;phys[7]=ppm&255;phys[8]=1;const crc32=arr=>{let c=0xffffffff;for(const b of arr){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return(c^0xffffffff)>>>0;};const chunk=new Uint8Array(21);chunk.set([0,0,0,9],0);chunk.set([112,72,89,115],4);chunk.set(phys,8);const crc=crc32(chunk.subarray(4,17));chunk[17]=(crc>>>24)&255;chunk[18]=(crc>>>16)&255;chunk[19]=(crc>>>8)&255;chunk[20]=crc&255;const pos=33;const png=new Uint8Array(raw.length+chunk.length);png.set(raw.subarray(0,pos),0);png.set(chunk,pos);png.set(raw.subarray(pos),pos+chunk.length);const finalBlob=new Blob([png],{type:'image/png'});const a=document.createElement('a'),url=URL.createObjectURL(finalBlob);a.href=url;a.download='token-'+n+'px-'+(n/300)+'in-300dpi.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');});
+    const npcSelect=document.getElementById('tokenNpcSelect'),attachBtn=document.getElementById('tokenAttach'),attachMsg=document.getElementById('tokenAttachMsg');
+  function populateNpcSelect(){if(!npcSelect)return;const list=(typeof NPCS!=='undefined'&&NPCS)||[];const prev=npcSelect.value;npcSelect.innerHTML='<option value="">— Выбери NPC —</option>'+list.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(n=>'<option value="'+n.id+'">'+String(n.name||'Без имени').replace(/[&<>\"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]))+'</option>').join('');if(prev)npcSelect.value=prev;attachBtn.disabled=!img||!npcSelect.value;}
+  window.refreshTokenNpcSelect=populateNpcSelect;if(npcSelect){npcSelect.addEventListener('change',()=>{attachBtn.disabled=!img||!npcSelect.value;});populateNpcSelect();}
+  if(attachBtn){attachBtn.addEventListener('click',async()=>{if(!img||!npcSelect.value||!fdb||!isGM())return;try{const n=192,c=document.createElement('canvas');c.width=c.height=n;draw(c,n);const data=c.toDataURL('image/png');await fdb.collection('npcs').doc(npcSelect.value).set({tokenImage:data},{merge:true});attachMsg.textContent='Токен прикреплён к NPC.';}catch(err){attachMsg.textContent='Ошибка сохранения: '+err.message;}});}
+download.addEventListener('click',()=>{if(!img)return;const n=Number(size.value),out=document.createElement('canvas');out.width=out.height=n;draw(out,n);out.toBlob(async blob=>{if(!blob)return;const raw=new Uint8Array(await blob.arrayBuffer());const phys=new Uint8Array(9);const ppm=11811;phys[0]=(ppm>>>24)&255;phys[1]=(ppm>>>16)&255;phys[2]=(ppm>>>8)&255;phys[3]=ppm&255;phys[4]=(ppm>>>24)&255;phys[5]=(ppm>>>16)&255;phys[6]=(ppm>>>8)&255;phys[7]=ppm&255;phys[8]=1;const crc32=arr=>{let c=0xffffffff;for(const b of arr){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return(c^0xffffffff)>>>0;};const chunk=new Uint8Array(21);chunk.set([0,0,0,9],0);chunk.set([112,72,89,115],4);chunk.set(phys,8);const crc=crc32(chunk.subarray(4,17));chunk[17]=(crc>>>24)&255;chunk[18]=(crc>>>16)&255;chunk[19]=(crc>>>8)&255;chunk[20]=crc&255;const pos=33;const png=new Uint8Array(raw.length+chunk.length);png.set(raw.subarray(0,pos),0);png.set(chunk,pos);png.set(raw.subarray(pos),pos+chunk.length);const finalBlob=new Blob([png],{type:'image/png'});const a=document.createElement('a'),url=URL.createObjectURL(finalBlob);a.href=url;a.download='token-'+n+'px-'+(n/300)+'in-300dpi.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');});
   refresh();
 })();
 </script>
