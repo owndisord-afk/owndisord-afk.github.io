@@ -160,6 +160,9 @@ span.tag{display:inline-block}
 .la-act .cost{float:right;color:var(--brass);font-weight:700}.la-act .note{display:block}.la-act.dis{opacity:.45;cursor:not-allowed}
 .spl{margin-top:3px}.spl-a{display:inline-block;margin:2px 4px 2px 0;padding:1px 9px;border:1px solid var(--line);border-radius:99px;font-size:13px;color:var(--text);text-decoration:none}
 a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
+
+.token-page{display:grid;grid-template-columns:minmax(280px,1fr) minmax(300px,1fr);gap:18px;padding:18px;max-width:1200px;margin:0 auto}.token-panel,.token-preview-panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}.token-help{color:var(--muted);font-size:14px}.token-upload{display:inline-block;margin:8px 0 14px;background:var(--brass);color:#1d1508;font-weight:700;padding:10px 14px;border-radius:7px;cursor:pointer}.token-upload input{display:none}.token-controls{display:grid;gap:12px}.token-controls label{display:grid;gap:6px;font-size:14px}.token-controls select{width:100%}.token-controls input[type=range]{width:100%;accent-color:var(--brass)}.token-controls button{width:100%}.token-stage{width:min(100%,420px);aspect-ratio:1;position:relative;margin:0 auto;display:grid;place-items:center;background:repeating-conic-gradient(#2c2539 0% 25%,#231d2e 0% 50%) 0 0/24px 24px;border-radius:10px;overflow:hidden}.token-stage canvas{width:100%;height:100%;touch-action:none;cursor:grab}.token-stage canvas:active{cursor:grabbing}.token-stage #tokenPlaceholder{position:absolute;text-align:center;color:var(--muted);pointer-events:none}.token-stage.has-image #tokenPlaceholder{display:none}
+@media(max-width:760px){.token-page{grid-template-columns:1fr;padding:12px}.token-panel,.token-preview-panel{padding:14px}}
 </style>
 </head>
 <body>
@@ -172,6 +175,7 @@ a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
   <a href="#pcs" data-n="pcs">Персонажи</a>
   <a href="#cities" data-n="cities">Карты</a>
   <a href="#settings" data-n="settings" class="gm-only">Настройки</a>
+  <a href="#tokens" data-n="tokens">Токены</a>
   <span class="authbox" id="authBox"></span>
 </nav>
 <div class="view" id="v-menu">
@@ -182,6 +186,7 @@ a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
     <a class="card" href="#pcs"><h2>Игровые персонажи</h2><p>Листы персонажей игроков</p></a>
     <a class="card" href="#cities"><h2>Карты</h2><p>Карта мест кампании</p></a>
     <a class="card gm-only" href="#settings"><h2>Настройки</h2><p>Настройка списков сайта</p></a>
+    <a class="card" href="#tokens"><h2>Обрезка токенов</h2><p>Создание круглых токенов для печати</p></a>
   </div>
 </div>
 <div class="view" id="v-lore">
@@ -212,6 +217,30 @@ a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
 </div>
 <div class="view" id="v-npc"><div class="npcwrap" id="npcRoot"></div></div>
 <div class="view" id="v-pcs"><div class="npcwrap" id="pcRoot"></div></div>
+<div class="view" id="v-tokens">
+  <div class="token-page">
+    <section class="token-panel">
+      <h2>Создание токена</h2>
+      <p class="token-help">Загрузи изображение, двигай его внутри круга и скачай PNG с окантовкой. Размеры рассчитаны на печать 300 DPI; печатай в масштабе 100% (без «подгонки к странице»). Изображение обрабатывается прямо в браузере и никуда не отправляется.</p>
+      <label class="token-upload"><input id="tokenFile" type="file" accept="image/*"><span>Выбрать изображение</span></label>
+      <div class="token-controls">
+        <label>Размер для печати
+          <select id="tokenSize"><option value="300">Среднее — 1 дюйм (25,4 мм)</option><option value="600">Большое — 2 дюйма (50,8 мм)</option><option value="900">Огромное — 3 дюйма (76,2 мм)</option></select>
+        </label>
+        <label>Масштаб картинки
+          <input id="tokenZoom" type="range" min="1" max="3" step="0.01" value="1" disabled>
+        </label>
+        <button id="tokenReset" type="button" disabled>Сбросить положение</button>
+        <button id="tokenDownload" class="primary" type="button" disabled>Скачать PNG</button>
+      </div>
+    </section>
+    <section class="token-preview-panel">
+      <h2>Предпросмотр</h2>
+      <p class="token-help">Зажми изображение и перетаскивай, чтобы расположить его внутри токена. Масштаб меняется ползунком.</p>
+      <div class="token-stage"><canvas id="tokenCanvas" width="420" height="420" aria-label="Предпросмотр круглого токена"></canvas><div id="tokenPlaceholder">Загрузи картинку,<br>чтобы создать токен</div></div>
+    </section>
+  </div>
+</div>
 <div class="view" id="v-cities"><iframe id="citiesFrame" title="Карта мест кампании" style="display:block;width:100%;height:calc(100vh - 110px);min-height:600px;border:0;background:#f6f1e7"></iframe></div>
 <div class="view" id="v-settings"><div class="npcwrap" id="settingsRoot"></div></div>
 <div class="view" id="v-login"><div class="npcwrap" id="loginRoot"></div></div>
@@ -699,15 +728,15 @@ function loadCities(){var f=$('citiesFrame');if(f&&!f.dataset.loaded){f.srcdoc=C
 function route(){
   var h = (location.hash || '#menu').slice(1), v, want, msg = '';
   if(h==='tracker') v = 'tracker'; else if(h==='lore') v = 'lore'; else if(/^wiki-(ket|imp)$/.test(h)) v = 'wiki';
-  else if(h.indexOf('npc')===0) v = 'npc'; else if(h.indexOf('pcs')===0) v = 'pcs'; else if(h==='cities') v = 'cities'; else if(h==='settings') v = 'settings'; else v = 'menu';
+  else if(h.indexOf('npc')===0) v = 'npc'; else if(h.indexOf('pcs')===0) v = 'pcs'; else if(h==='cities') v = 'cities'; else if(h==='settings') v = 'settings'; else if(h==='tokens') v = 'tokens'; else v = 'menu';
   want = v;
-  if(v!=='menu' && v!=='cities'){
+  if(v!=='menu' && v!=='cities' && v!=='tokens'){
     if(typeof authReady==='undefined' || !authReady){ v = 'login'; msg = 'load'; }
     else if(!user){ v = 'login'; msg = 'login'; }
     else if((v==='npc' || v==='settings') && !isGM()){ v = 'login'; msg = 'gm'; }
     else if(v==='tracker' && !isGM()) v = 'queue';
   }
-  ['menu','lore','wiki','npc','pcs','cities','settings','tracker','queue','login'].forEach(function(id){ $('v-'+id).classList.toggle('on', id===v); });
+  ['menu','lore','wiki','npc','pcs','cities','settings','tokens','tracker','queue','login'].forEach(function(id){ $('v-'+id).classList.toggle('on', id===v); });
   var nk = want==='wiki' ? 'lore' : want;
   Array.prototype.forEach.call(document.querySelectorAll('nav.top a'), function(a){ a.classList.toggle('on', a.dataset.n===nk); });
   if(v==='wiki') openWiki(h.slice(5));
@@ -1045,5 +1074,36 @@ route();
 <script>
 if('serviceWorker' in navigator){ window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
 </script>
+
+<script>
+(function(){
+  const file=document.getElementById('tokenFile'), canvas=document.getElementById('tokenCanvas'), ctx=canvas.getContext('2d'), zoom=document.getElementById('tokenZoom'), size=document.getElementById('tokenSize'), reset=document.getElementById('tokenReset'), download=document.getElementById('tokenDownload'), stage=document.querySelector('.token-stage');
+  if(!file||!canvas)return;
+  const S=420;let img=null,base=1,scale=1,dx=0,dy=0,drag=null;
+  function draw(target,px){
+    const c=target, g=c.getContext('2d'), n=c.width, ratio=n/S;
+    g.clearRect(0,0,n,n);
+    if(!img)return;
+    const s=base*scale*ratio, w=img.width*s,h=img.height*s, x=(S-w)/2*ratio+dx*ratio,y=(S-h)/2*ratio+dy*ratio;
+    g.save();g.beginPath();g.arc(n/2,n/2,n/2-1,0,Math.PI*2);g.clip();g.drawImage(img,x,y,w,h);g.restore();
+    // Basic bronze token rim: dark outer edge, double warm-metal line, four small rivets.
+    g.save();g.lineWidth=Math.max(2,n*.018);g.strokeStyle='#34251b';g.beginPath();g.arc(n/2,n/2,n*.493,0,Math.PI*2);g.stroke();
+    g.lineWidth=Math.max(1.5,n*.009);g.strokeStyle='#d8a85b';g.beginPath();g.arc(n/2,n/2,n*.472,0,Math.PI*2);g.stroke();
+    g.lineWidth=Math.max(1,n*.004);g.strokeStyle='#f3d49a';g.beginPath();g.arc(n/2,n/2,n*.455,0,Math.PI*2);g.stroke();
+    for(let i=0;i<8;i++){const a=i*Math.PI/4,r=n*.465,rad=n*.012;const xx=n/2+Math.cos(a)*r, yy=n/2+Math.sin(a)*r;g.fillStyle='#6f4c2c';g.beginPath();g.arc(xx,yy,rad,0,Math.PI*2);g.fill();g.fillStyle='#e8bd76';g.beginPath();g.arc(xx-rad*.22,yy-rad*.22,rad*.52,0,Math.PI*2);g.fill();}
+    g.restore();
+  }
+  function refresh(){draw(canvas,S);stage.classList.toggle('has-image',!!img);zoom.disabled=!img;reset.disabled=!img;download.disabled=!img;}
+  file.addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(!f.type.startsWith('image/')){alert('Выбери файл изображения.');return;}const url=URL.createObjectURL(f),im=new Image();im.onload=()=>{if(img&&img.src&&img.src.startsWith('blob:'))URL.revokeObjectURL(img.src);img=im;base=Math.max(S/im.width,S/im.height);scale=1;dx=dy=0;zoom.value='1';refresh();};im.onerror=()=>alert('Не удалось открыть изображение.');im.src=url;});
+  zoom.addEventListener('input',()=>{scale=Number(zoom.value);refresh();});
+  reset.addEventListener('click',()=>{scale=1;dx=dy=0;zoom.value='1';refresh();});
+  canvas.addEventListener('pointerdown',e=>{if(!img)return;drag={x:e.clientX,y:e.clientY,dx,dy};canvas.setPointerCapture(e.pointerId)});
+  canvas.addEventListener('pointermove',e=>{if(!drag)return;const rect=canvas.getBoundingClientRect(),k=S/rect.width;dx=drag.dx+(e.clientX-drag.x)*k;dy=drag.dy+(e.clientY-drag.y)*k;refresh();});
+  canvas.addEventListener('pointerup',()=>drag=null);canvas.addEventListener('pointercancel',()=>drag=null);
+  download.addEventListener('click',()=>{if(!img)return;const n=Number(size.value),out=document.createElement('canvas');out.width=out.height=n;draw(out,n);out.toBlob(async blob=>{if(!blob)return;const raw=new Uint8Array(await blob.arrayBuffer());const phys=new Uint8Array(9);const ppm=11811;phys[0]=(ppm>>>24)&255;phys[1]=(ppm>>>16)&255;phys[2]=(ppm>>>8)&255;phys[3]=ppm&255;phys[4]=(ppm>>>24)&255;phys[5]=(ppm>>>16)&255;phys[6]=(ppm>>>8)&255;phys[7]=ppm&255;phys[8]=1;const crc32=arr=>{let c=0xffffffff;for(const b of arr){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);}return(c^0xffffffff)>>>0;};const chunk=new Uint8Array(21);chunk.set([0,0,0,9],0);chunk.set([112,72,89,115],4);chunk.set(phys,8);const crc=crc32(chunk.subarray(4,17));chunk[17]=(crc>>>24)&255;chunk[18]=(crc>>>16)&255;chunk[19]=(crc>>>8)&255;chunk[20]=crc&255;const pos=33;const png=new Uint8Array(raw.length+chunk.length);png.set(raw.subarray(0,pos),0);png.set(chunk,pos);png.set(raw.subarray(pos),pos+chunk.length);const finalBlob=new Blob([png],{type:'image/png'});const a=document.createElement('a'),url=URL.createObjectURL(finalBlob);a.href=url;a.download='token-'+n+'px-'+(n/300)+'in-300dpi.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},'image/png');});
+  refresh();
+})();
+</script>
+
 </body>
 </html>
