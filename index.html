@@ -1084,8 +1084,12 @@ if('serviceWorker' in navigator){ window.addEventListener('load', function(){ na
     const c=target, g=c.getContext('2d'), n=c.width, ratio=n/S;
     g.clearRect(0,0,n,n);
     if(!img)return;
-    const s=base*scale*ratio, w=img.width*s,h=img.height*s, x=(S-w)/2*ratio+dx*ratio,y=(S-h)/2*ratio+dy*ratio;
-    g.save();g.beginPath();g.arc(n/2,n/2,n/2-1,0,Math.PI*2);g.clip();g.drawImage(img,x,y,w,h);g.restore();
+    // Keep the crop in preview-space coordinates, then scale the entire composition
+    // once for export. Previously the image size and centering offsets were both
+    // multiplied by ratio, which changed the crop when exporting below 420px.
+    const s=base*scale, w=img.width*s,h=img.height*s;
+    const x=((S-w)/2+dx)*ratio,y=((S-h)/2+dy)*ratio;
+    g.save();g.beginPath();g.arc(n/2,n/2,n/2-1,0,Math.PI*2);g.clip();g.drawImage(img,x,y,w*ratio,h*ratio);g.restore();
     // Basic bronze token rim: dark outer edge, double warm-metal line, four small rivets.
     g.save();g.lineWidth=Math.max(2,n*.018);g.strokeStyle='#34251b';g.beginPath();g.arc(n/2,n/2,n*.493,0,Math.PI*2);g.stroke();
     g.lineWidth=Math.max(1.5,n*.009);g.strokeStyle='#d8a85b';g.beginPath();g.arc(n/2,n/2,n*.472,0,Math.PI*2);g.stroke();
