@@ -43,8 +43,9 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px
 .absent:empty{display:none}
 .absent button{font-size:13px;padding:3px 9px;color:var(--muted);background:transparent}
 .ac{position:relative}
-.aclist{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:50;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px;gap:0;max-height:min(60vh,520px);overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.4);min-width:260px}
+.aclist{position:fixed;left:auto;right:auto;top:auto;margin-top:4px;z-index:99999;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px;gap:0;max-height:min(60vh,520px);overflow:auto;box-shadow:0 6px 18px rgba(0,0,0,.4);min-width:260px}
 .aclist[hidden]{display:none}
+.spellblock{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:8px 10px;margin:8px 0}.spellblock-small{max-width:300px}.spellparams{display:flex;flex-wrap:wrap;gap:6px}.spellparams>span{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--muted)}.spellparams b{color:var(--brass)}
 .aclist li{display:flex;justify-content:space-between;gap:8px;padding:6px 9px;border-radius:4px;cursor:pointer}
 .aclist .x{color:var(--muted);padding:0 6px;font-weight:400}
 .aclist .x:hover{color:var(--npc)}
@@ -330,10 +331,10 @@ function extraHTML(c){
 }
 function hpPct(cur,mx){ if(!mx || cur===''||cur==null||isNaN(cur)) return 0; return Math.max(0,Math.min(100,Math.round(cur/mx*100))); }
 function hpColor(p){ return p>50 ? 'var(--pc)' : p>25 ? 'var(--brass)' : 'var(--npc)'; }
-function spellInfo(N){ var parts=[]; if(N.showSpellInfo || N.mage){ if(N.dc!==''&&N.dc!=null) parts.push('СЛ закл. '+esc(N.dc)); if(N.spellAtk!==''&&N.spellAtk!=null) parts.push('Мод. атаки закл. '+esc(N.spellAtk)); } return parts.join(' · '); }
+function spellInfo(N){ var parts=[]; if(N.showSpellInfo || N.mage){ if(N.dc!==''&&N.dc!=null) parts.push('<span>СЛ закл. <b>'+esc(N.dc)+'</b></span>'); if(N.spellAtk!==''&&N.spellAtk!=null) parts.push('<span>Мод. атаки закл. <b>'+esc(N.spellAtk)+'</b></span>'); } return parts.join(''); }
 function statHTML(c,N){
   var u = c.used || (c.used = {a:{},s:{}}), mx = numOf(N.hp);
-  var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700" title="Открыть лист непися">'+esc(c.name)+'</a><div class="hpbox"><div class="hpcell"><span>Max ХП</span><b>'+(mx==null?'—':mx)+'</b></div><div class="hpcell cur"><span>Текущие ХП</span><input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></div><div class="hpcell dmg"><span>Урон</span><input class="damage" type="number" data-act="dmg" placeholder="0"></div><div class="hpbar"><i data-hpbar="'+c.id+'" style="width:'+hpPct(c.hp,mx)+'%;background:'+hpColor(hpPct(c.hp,mx))+'"></i></div></div><div class="ministats"><div><span>КД</span><b>'+esc(N.ac||'—')+'</b></div><div><span>БМ</span><b>'+dashS(N.cr)+'</b>'+(!N.mage && spellInfo(N)?'<small class="spellmini">'+spellInfo(N)+'</small>':'')+'</div><div><span>П. вним.</span><b>'+dashS(passiveOf(N))+'</b></div></div>';
+  var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700" title="Открыть лист непися">'+esc(c.name)+'</a><div class="hpbox"><div class="hpcell"><span>Max ХП</span><b>'+(mx==null?'—':mx)+'</b></div><div class="hpcell cur"><span>Текущие ХП</span><input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></div><div class="hpcell dmg"><span>Урон</span><input class="damage" type="number" data-act="dmg" placeholder="0"></div><div class="hpbar"><i data-hpbar="'+c.id+'" style="width:'+hpPct(c.hp,mx)+'%;background:'+hpColor(hpPct(c.hp,mx))+'"></i></div></div><div class="ministats"><div><span>КД</span><b>'+esc(N.ac||'—')+'</b></div><div><span>БМ</span><b>'+dashS(N.cr)+'</b>'+''+'</div><div><span>П. вним.</span><b>'+dashS(passiveOf(N))+'</b></div></div>';
   var sk = skillsLine(N); var sv = (N.saves||[]).map(function(k){ var st=STATS.filter(function(x){return x[0]===k;})[0]; return (st?st[1]:k.toUpperCase())+' '+fm(plus(mod((N.stats||{})[k]),numOf(N.cr)||0)); });
   if(sv.length) h += '<p style="margin:8px 0 0"><b>Спасброски:</b> '+sv.join(', ')+'</p>';
   if(sk) h += '<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>';
@@ -342,10 +343,9 @@ function statHTML(c,N){
     if(!a.tr && !a.note && !a.name && !a.text) return;
     var n = +a.trn||1, used = u.a[i]||0, cells = '', period = a.trp==='round' ? 'р/раунд' : 'р/день', lk = !!(u.lock && u.lock[i]);
     if(a.tr) for(var k=0;k<n;k++) cells += '<span class="slot'+(k<used?' used':'')+'" data-su="a" data-i="'+i+'" data-k="'+k+'"></span>';
-    var act = a.action ? '<span class="actbadge act-'+escA(a.action)+'">'+esc(a.action.toUpperCase())+'</span>' : '';
+    var act = a.action ? '<span class="actbadge act-'+escA(a.action)+'">'+({d:'д',bd:'бд',r:'р'}[a.action]||'')+'</span>' : '';
     ab += '<p style="margin:8px 0 0">'+act+'<b>'+esc(a.name||'Способность')+'</b>'+(a.tr ? ' <span class="note">'+n+' '+period+'</span> '+cells+(a.trp==='round' ? ' <button type="button" class="lockbtn'+(lk?' on':'')+'" data-lock="'+i+'" title="'+(lk?'Заблокировано от автосброса. Нажми, чтобы разблокировать':'Заблокировать от автосброса в начале раунда')+'">'+(lk?'🔒':'🔓')+'</button>' : '') : '')+(a.note ? '<br><span class="note">'+esc(a.note)+'</span>' : '')+'</p>';
   });
-  (N.trackers||[]).forEach(function(t){ if(t.name||t.note) ab += '<p style="margin:8px 0 0"><b>'+esc(t.name||'Трекер')+'</b>'+(t.note?'<br><span class="note">'+esc(t.note)+'</span>':'')+'</p>'; });
   (N.attacks||[]).forEach(function(a){
     ab += '<p style="margin:8px 0 0"><b>'+esc(a.name||'Атака')+'</b>'+(a.hit ? ' <span class="note">'+esc(a.hit)+'</span>' : '')+(a.note ? '<br><span class="note">'+esc(a.note)+'</span>' : '')+'</p>';
   });
@@ -363,7 +363,9 @@ function statHTML(c,N){
     var rows = '';
     for(var l=1;l<=9;l++){ var cnt = (N.slots||{})[l]||0; if(!cnt) continue; var us = u.s[l]||0, cl = ''; for(var k=0;k<cnt;k++) cl += '<span class="slot'+(k<us?' used':'')+'" data-su="s" data-i="'+l+'" data-k="'+k+'"></span>'; var sp = spellLinks((N.spells||{})[l]); rows += '<tr><td>'+l+'</td><td>'+cl+(sp?'<div class="spl">'+sp+'</div>':'')+'</td></tr>'; }
     var cz = spellLinks((N.spells||{})[0]); if(cz) rows = '<tr><td>Заг.</td><td><div class="spl">'+cz+'</div></td></tr>'+rows;
-    if(rows || spellInfo(N)) h += '<hr class="sep"><div class="spellhead"><b>Ячейки заклинаний</b>'+(spellInfo(N) ? '<div class="dcbox"><span>'+spellInfo(N)+'</span></div>' : '')+'</div>'+(rows?'<table class="st">'+rows+'</table>':'');
+    if(rows || spellInfo(N)) h += '<hr class="sep"><div class="spellblock"><div class="spellhead"><b>Ячейки заклинаний</b>'+(spellInfo(N) ? '<div class="spellparams">'+spellInfo(N)+'</div>' : '')+'</div>'+(rows?'<table class="st">'+rows+'</table>':'')+'</div>';
+  } else if(spellInfo(N)) {
+    h += '<div class="spellblock spellblock-small"><div class="spellparams">'+spellInfo(N)+'</div></div>';
   }
   [['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость']].forEach(function(l){ if((N[l[0]]||[]).length) h += '<p style="margin:8px 0 0"><b>'+l[1]+':</b> '+N[l[0]].map(esc).join(', ')+'</p>'; });
   return h + '</div>';
@@ -534,6 +536,7 @@ $('apply').onclick = function(){
 function escA(t){ return esc(t).replace(/"/g,'&quot;'); }
 function setupAC(inp, ul, items, onEnter, onRemove){
   var idx = -1;
+  function position(){ if(ul.hidden) return; var r=inp.getBoundingClientRect(); ul.style.left=Math.max(8,r.left)+'px'; ul.style.top=(r.bottom+4)+'px'; ul.style.width=r.width+'px'; ul.style.maxHeight='min(60vh,520px)'; }
   function show(){
     var q = inp.value.trim().toLowerCase();
     var src = typeof items==='function' ? items() : items;
@@ -541,10 +544,12 @@ function setupAC(inp, ul, items, onEnter, onRemove){
     idx = -1;
     ul.innerHTML = list.map(function(n){return '<li data-v="'+escA(n)+'">'+esc(n)+(onRemove?'<b class="x" title="Убрать из подсказок">×</b>':'')+'</li>';}).join('');
     ul.hidden = !list.length;
+    position();
   }
   function hide(){ ul.hidden = true; idx = -1; }
   function pick(t){ inp.value = t; hide(); }
   function mark(){ Array.prototype.forEach.call(ul.children, function(li,i){ li.classList.toggle('sel', i===idx); }); }
+  window.addEventListener('resize', position); window.addEventListener('scroll', position, true);
   inp.addEventListener('focus', show);
   inp.addEventListener('click', show);
   inp.addEventListener('input', show);
@@ -719,7 +724,7 @@ function mod(v){ return (v===''||v==null||isNaN(v)) ? null : Math.floor((+v-10)/
 function plus(m,b){ return m==null ? null : m+b; }
 function fm(n){ return n==null ? '—' : (n>=0 ? '+'+n : ''+n); }
 function dash(x){ return (x==null||x==='') ? '—' : esc(x); }
-function blank(){ return {name:'',cr:'',mage:false,dc:'',spellAtk:'',showSpellInfo:false,trackers:[],la:'',lactions:[],spells:{},slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[]}; }
+function blank(){ return {name:'',cr:'',mage:false,dc:'',spellAtk:'',showSpellInfo:false,la:'',lactions:[],spells:{},slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[]}; }
 function setP(path,val){ var k = path.split('.'), o = ed; for(var i=0;i<k.length-1;i++){ if(o[k[i]]==null) o[k[i]] = {}; o = o[k[i]]; } o[k[k.length-1]] = val; }
 function getP(path){ return path.split('.').reduce(function(o,k){ return o==null ? o : o[k]; }, ed); }
 function skillBonus(n,name){
@@ -850,7 +855,7 @@ function renderNpc(parts){
   if(p[1]==='new'){ if(!ed){ ed = blank(); edId = null; } R.innerHTML = formHTML(); return; }
   var n = D.filter(function(x){ return x.id===p[1]; })[0];
   if(!n){ R.innerHTML = '<p class="note">Не найдено. <a href="#'+HK+'" style="color:var(--pc)">К списку</a></p>'; return; }
-  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = Object.assign(blank(), JSON.parse(JSON.stringify(n))); ed.abilities=(ed.abilities||[]).map(function(a){return Object.assign({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''},a);}); ed.attacks=(ed.attacks||[]).map(function(a){return Object.assign({name:'',hit:'',note:'',text:''},a);}); ed.trackers=ed.trackers||[]; ed.lactions=(ed.lactions||[]).map(function(a){return Object.assign({name:'',cost:1,note:'',text:''},a);}); edId = n.id; } R.innerHTML = formHTML(); }
+  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = Object.assign(blank(), JSON.parse(JSON.stringify(n))); ed.abilities=(ed.abilities||[]).map(function(a){return Object.assign({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''},a);}); ed.attacks=(ed.attacks||[]).map(function(a){return Object.assign({name:'',hit:'',note:'',text:''},a);}); ed.lactions=(ed.lactions||[]).map(function(a){return Object.assign({name:'',cost:1,note:'',text:''},a);}); edId = n.id; } R.innerHTML = formHTML(); }
   else { ed = null; R.innerHTML = sheetHTML(n); }
 }
 
@@ -920,9 +925,7 @@ function formHTML(){
       +'<div class="fld"><label><input type="checkbox" data-p="'+P+'tr" data-re="1" style="width:auto"'+(a.tr?' checked':'')+'> Трекер</label>'+(a.tr?'<select data-p="'+P+'trn" data-num="1">'+[1,2,3,4,5,6].map(function(c){ return '<option value="'+c+'"'+((+a.trn||1)===c?' selected':'')+'>'+c+' раз</option>'; }).join('')+'</select><select data-p="'+P+'trp"><option value="day"'+(a.trp!=='round'?' selected':'')+'>в день</option><option value="round"'+(a.trp==='round'?' selected':'')+'>за раунд</option></select>':'')+'</div>'
       +'<div class="fld"><label><input type="checkbox" data-p="'+P+'rc" data-re="1" style="width:auto"'+(a.rc?' checked':'')+'> Перезарядка</label>'+(a.rc?'<div class="chips">'+[4,5,6].map(function(c){ return chip(P+'rcv',c,c,(a.rcv||[]).indexOf(c)>-1||(a.rcv||[]).indexOf(''+c)>-1); }).join('')+'</div>':'')+'</div></div>';
   });
-  h += '<div class="blk"><b>Отдельные трекеры статблока</b><p class="note">Только название и краткое описание, без расходуемых ячеек.</p>';
-  (e.trackers||[]).forEach(function(t,i){ var P='trackers.'+i+'.'; h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Трекер</b><button class="small" data-a="rmTracker" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название',t.name)+'<div class="fld note-field"><label>Краткое описание</label><textarea data-p="'+P+'note">'+esc(t.note||'')+'</textarea></div></div>'; });
-  h += '<button data-a="addTracker">Добавить трекер</button></div><button data-a="addAb">Добавить способность</button>';
+  h += '<button data-a="addAb">Добавить способность</button>';
   e.attacks.forEach(function(a,i){
     var P = 'attacks.'+i+'.';
     h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Атака</b><button class="small" data-a="rmAt" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название атаки',a.name)+F(P+'hit','На попадание',a.hit)+'<div class="fld note-field"><label>Краткая заметка</label><textarea data-p="'+P+'note">'+esc(a.note||'')+'</textarea></div><div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
@@ -984,8 +987,6 @@ function bindSheet(R){
     if(a==='login') login();
     else if(a==='logout') fauth.signOut();
     else if(a==='addAb'){ ed.abilities.push({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''}); again(); }
-    else if(a==='addTracker'){ ed.trackers.push({name:'',note:''}); again(); }
-    else if(a==='rmTracker'){ ed.trackers.splice(i,1); again(); }
     else if(a==='rmAb'){ ed.abilities.splice(i,1); again(); }
     else if(a==='addAt'){ ed.attacks.push({name:'',hit:'',note:'',text:''}); again(); }
     else if(a==='rmAt'){ ed.attacks.splice(i,1); again(); }
