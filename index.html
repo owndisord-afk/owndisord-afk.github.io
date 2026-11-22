@@ -170,6 +170,7 @@ a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
   <a href="#tracker" data-n="tracker">Бой</a>
   <a href="#npc" data-n="npc" class="gm-only">NPC</a>
   <a href="#pcs" data-n="pcs">Персонажи</a>
+  <a href="#settings" data-n="settings" class="gm-only">Настройки</a>
   <span class="authbox" id="authBox"></span>
 </nav>
 <div class="view" id="v-menu">
@@ -178,6 +179,7 @@ a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
     <a class="card" href="#tracker"><h2>Бой</h2><p>Очередь ходов и состояния существ</p></a>
     <a class="card gm-only" href="#npc"><h2>NPC</h2><p>База неписей: только для мастера</p></a>
     <a class="card" href="#pcs"><h2>Игровые персонажи</h2><p>Листы персонажей игроков</p></a>
+    <a class="card gm-only" href="#settings"><h2>Настройки</h2><p>Настройка списков сайта</p></a>
   </div>
 </div>
 <div class="view" id="v-lore">
@@ -208,6 +210,7 @@ a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
 </div>
 <div class="view" id="v-npc"><div class="npcwrap" id="npcRoot"></div></div>
 <div class="view" id="v-pcs"><div class="npcwrap" id="pcRoot"></div></div>
+<div class="view" id="v-settings"><div class="npcwrap" id="settingsRoot"></div></div>
 <div class="view" id="v-login"><div class="npcwrap" id="loginRoot"></div></div>
 <div class="view" id="v-queue"><div class="npcwrap">
   <div class="bar" style="justify-content:space-between"><h1>Бой</h1><span class="round">Раунд <b id="qRound">—</b></span></div>
@@ -281,6 +284,7 @@ var KEY = 'dnd-initiative-v1';
 var BASE = ['Ослеплён','Очарован','Оглох','Испуган','Схвачен','Недееспособен','Невидим','Парализован','Окаменел','Отравлен','Лежит ничком','Опутан','Ошеломлён','Без сознания','Истощение','Замедлен','Ускорен','Концентрация','Благословлён','Горит'];
 // ===== ПОДСКАЗКИ ДЛЯ ПОЛЯ «ЗАМЕТКА К СОСТОЯНИЮ»: правьте здесь =====
 var NOTES = ['1 мин','10 мин','до конца сл. хода','до начала сл. хода'];
+var STATE_LIST = BASE.slice();
 var PC_NAMES = ['Ииска','Дариан','Омела','Фил','Драуг'];
 function newFightId(){ return 'fight-'+Date.now()+'-'+Math.random().toString(36).slice(2,9); }
 
@@ -576,7 +580,7 @@ function setupAC(inp, ul, items, onEnter, onRemove){
     }
   });
 }
-setupAC($('cond'), $('condList'), BASE, function(){ $('tagNote').focus(); });
+setupAC($('cond'), $('condList'), function(){ return STATE_LIST; }, function(){ $('tagNote').focus(); });
 setupAC($('tagNote'), $('acList'), NOTES, function(){ $('apply').click(); });
 setupAC($('newName'), $('npcList'), function(){
   var db = (isGM() && typeof NPCS!=='undefined' && NPCS) ? NPCS.map(function(x){ return x.name; }).filter(Boolean).sort(function(a,b){ return a.localeCompare(b); }) : [];
@@ -690,19 +694,20 @@ $('wImport').onchange = function(e){
 function route(){
   var h = (location.hash || '#menu').slice(1), v, want, msg = '';
   if(h==='tracker') v = 'tracker'; else if(h==='lore') v = 'lore'; else if(/^wiki-(ket|imp)$/.test(h)) v = 'wiki';
-  else if(h.indexOf('npc')===0) v = 'npc'; else if(h.indexOf('pcs')===0) v = 'pcs'; else v = 'menu';
+  else if(h.indexOf('npc')===0) v = 'npc'; else if(h.indexOf('pcs')===0) v = 'pcs'; else if(h==='settings') v = 'settings'; else v = 'menu';
   want = v;
   if(v!=='menu'){
     if(typeof authReady==='undefined' || !authReady){ v = 'login'; msg = 'load'; }
     else if(!user){ v = 'login'; msg = 'login'; }
-    else if(v==='npc' && !isGM()){ v = 'login'; msg = 'gm'; }
+    else if((v==='npc' || v==='settings') && !isGM()){ v = 'login'; msg = 'gm'; }
     else if(v==='tracker' && !isGM()) v = 'queue';
   }
-  ['menu','lore','wiki','npc','pcs','tracker','queue','login'].forEach(function(id){ $('v-'+id).classList.toggle('on', id===v); });
+  ['menu','lore','wiki','npc','pcs','settings','tracker','queue','login'].forEach(function(id){ $('v-'+id).classList.toggle('on', id===v); });
   var nk = want==='wiki' ? 'lore' : want;
   Array.prototype.forEach.call(document.querySelectorAll('nav.top a'), function(a){ a.classList.toggle('on', a.dataset.n===nk); });
   if(v==='wiki') openWiki(h.slice(5));
   if(v==='npc' || v==='pcs'){ if(typeof renderNpc==='function') renderNpc(h.split('/')); } else ed = null;
+  if(v==='settings') renderSettings();
   if(v==='queue' && typeof renderQueue==='function') renderQueue();
   if(v==='login' && typeof renderLogin==='function') renderLogin(msg);
   window.scrollTo(0,0);
@@ -775,10 +780,10 @@ function pushCombat(){
   if(!fdb || !isGM()) return;
   clearTimeout(pushT);
   pushT = setTimeout(function(){
-    var data = {fightId:S.fightId, round:S.round, turn:S.turn||'', creatures:S.creatures.filter(function(c){ return c.active; }).map(function(c){
+    var data = {conditions:STATE_LIST.slice(), fightId:S.fightId, round:S.round, turn:S.turn||'', creatures:S.creatures.filter(function(c){ return c.active; }).map(function(c){
       return {id:c.id, name:c.name, pc:!!c.pc, init:(c.init===''||c.init==null)?'':+c.init, tags:c.pc ? c.tags.map(function(t){ return {t:t.t, note:t.note||'', dur:t.dur==null?'':t.dur, start:t.start==null?0:t.start}; }) : []};
     })};
-    fdb.collection('combat').doc('state').set(data).catch(function(){});
+    fdb.collection('combat').doc('state').set(data,{merge:true}).catch(function(){});
   }, 600);
 }
 
@@ -797,11 +802,29 @@ try{
       listen(fdb.collection('pcs'), function(sn){ PCS = docs(sn); refreshAll(); });
       listen(fdb.collection('lore'), function(sn){ LORE = {}; sn.docs.forEach(function(d){ LORE[d.id] = d.data().text; }); seedLore(); refreshAll(); });
       if(gm) listen(fdb.collection('playerTags'), mergeTags);
-      else listen(fdb.collection('combat'), function(sn){ COMBAT = null; sn.docs.forEach(function(d){ if(d.id==='state') COMBAT = d.data(); }); if(COMBAT && COMBAT.creatures) COMBAT.creatures.forEach(function(c){ if(c.name==='Амелия') c.name='Омела'; }); renderQueue(); });
+      listen(fdb.collection('combat').doc('state'), function(doc){
+        if(doc.exists){ COMBAT=doc.data()||{}; if(Array.isArray(COMBAT.conditions)){ STATE_LIST=COMBAT.conditions.map(function(x){return String(x);}); if(settingsConditionsDraft===null) settingsConditionsDraft=STATE_LIST.slice(); } }
+        else COMBAT=null;
+        if(COMBAT && COMBAT.creatures) COMBAT.creatures.forEach(function(c){ if(c.name==='Амелия') c.name='Омела'; });
+        renderQueue(); if(location.hash==='#settings' && isGM()) renderSettings();
+      });
     }
     render(); route();
   });
 }catch(e){ fbErr = String(e); authReady = true; }
+
+var settingsConditionsDraft = null;
+function renderSettings(){
+  var R=$('settingsRoot'); if(!R) return;
+  if(!isGM()){ R.innerHTML='<h1>Только для мастера</h1>'; return; }
+  if(settingsConditionsDraft===null) settingsConditionsDraft=STATE_LIST.slice();
+  R.innerHTML='<div class="bar" style="justify-content:space-between"><h1>Настройки</h1><button class="bigY" id="saveConditions">Сохранить список</button></div><div class="blk"><h2 style="margin-top:0">Состояния</h2><p class="note">Этот список используется в подсказках при добавлении состояний в бою. Можно добавлять, переименовывать и удалять варианты. Пользовательские состояния, введённые вручную, по-прежнему разрешены.</p><div id="conditionSettingsList">'+settingsConditionsDraft.map(function(x,i){return '<div class="bar" style="margin:6px 0"><input data-condition-index="'+i+'" value="'+escA(x)+'" style="flex:1"><button class="small" data-remove-condition="'+i+'" title="Удалить">×</button></div>';}).join('')+'</div><div class="bar" style="margin-top:10px"><input id="newCondition" placeholder="Новое состояние"><button id="addCondition" class="bigY">Добавить</button></div><p class="note" id="settingsMsg"></p></div>';
+  R.querySelectorAll('[data-condition-index]').forEach(function(inp){inp.addEventListener('input',function(){settingsConditionsDraft[+inp.dataset.conditionIndex]=inp.value;});});
+  R.querySelectorAll('[data-remove-condition]').forEach(function(btn){btn.onclick=function(){settingsConditionsDraft.splice(+btn.dataset.removeCondition,1);renderSettings();};});
+  $('addCondition').onclick=function(){var v=$('newCondition').value.trim();if(!v)return;if(settingsConditionsDraft.indexOf(v)<0)settingsConditionsDraft.push(v);renderSettings();};
+  $('newCondition').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('addCondition').click();}});
+  $('saveConditions').onclick=function(){var cleaned=settingsConditionsDraft.map(function(x){return String(x||'').trim();}).filter(Boolean).filter(function(x,i,a){return a.indexOf(x)===i;});STATE_LIST=cleaned;settingsConditionsDraft=cleaned.slice();if(!fdb){$('settingsMsg').textContent='Нет подключения к базе данных.';return;}fdb.collection('combat').doc('state').set({conditions:cleaned},{merge:true}).then(function(){ $('settingsMsg').textContent='Список сохранён.'; }).catch(function(err){$('settingsMsg').textContent='Не удалось сохранить: '+err.message;});};
+}
 
 function renderLogin(msg){
   var R = $('loginRoot');
@@ -828,7 +851,7 @@ function renderQueue(){
   var pcs = cr.filter(function(c){ return c.pc; }), sig = pcs.map(function(c){ return c.id; }).join();
   if(sig!==qSig){ qSig = sig; var cur = $('qWho').value; $('qWho').innerHTML = pcs.map(function(c){ return '<option value="'+escA(c.id)+'">'+esc(c.name)+'</option>'; }).join(''); if(cur) $('qWho').value = cur; }
 }
-setupAC($('qCond'), $('qCondList'), BASE, function(){ $('qNote').focus(); });
+setupAC($('qCond'), $('qCondList'), function(){ return (COMBAT && COMBAT.conditions) || STATE_LIST; }, function(){ $('qNote').focus(); });
 setupAC($('qNote'), $('qNoteList'), NOTES, function(){ $('qApply').click(); });
 $('qApply').onclick = function(){
   var cid = $('qWho').value, t = $('qCond').value.trim(); if(!cid || !t || !fdb) return;
@@ -888,7 +911,8 @@ function sheetHTML(n){
   }
   if(n.desc) h += '<div class="blk"><b>Описание</b><p style="white-space:pre-wrap">'+esc(n.desc)+'</p></div>';
   (n.abilities||[]).forEach(function(a){
-    h += '<div class="blk"><b>'+esc(a.name||'Способность')+'</b>'+(a.tr?' <span class="note">'+a.trn+' '+(a.trp==='round'?'р/раунд':'р/день')+'</span> '+new Array((+a.trn||1)+1).join('<span class="slot"></span>'):'')+(a.rc&&(a.rcv||[]).length?' <span class="note">Перезарядка '+a.rcv.join(', ')+'</span>':'')+(a.note?'<div class="note" style="margin-top:5px">'+esc(a.note)+'</div>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>';
+    var act = a.action ? '<span class="actbadge act-'+escA(a.action)+'">'+({d:'д',bd:'бд',r:'р'}[a.action]||'')+'</span>' : '';
+    h += '<div class="blk">'+act+'<b>'+esc(a.name||'Способность')+'</b>'+(a.tr?' <span class="note">'+a.trn+' '+(a.trp==='round'?'р/раунд':'р/день')+'</span> '+new Array((+a.trn||1)+1).join('<span class="slot"></span>'):'')+(a.rc&&(a.rcv||[]).length?' <span class="note">Перезарядка '+a.rcv.join(', ')+'</span>':'')+(a.note?'<div class="note" style="margin-top:5px">'+esc(a.note)+'</div>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>';
   });
   (n.attacks||[]).forEach(function(a){ var act = a.action ? '<span class="actbadge act-'+escA(a.action)+'">'+({d:'д',bd:'бд',r:'р'}[a.action]||'')+'</span>' : ''; h += '<div class="blk">'+act+'<b>'+esc(a.name||'Атака')+'</b>'+(a.hit?' <span class="note">на попадание '+esc(a.hit)+'</span>':'')+(a.note?'<div class="note" style="margin-top:5px">'+esc(a.note)+'</div>':'')+'<p style="white-space:pre-wrap;margin:6px 0 0">'+esc(a.text||'')+'</p></div>'; });
   if((n.lactions||[]).length || n.la){
