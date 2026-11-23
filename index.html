@@ -82,7 +82,7 @@ nav.top a.on{color:var(--brass);background:var(--panel2)}
 .pagehead{max-width:1200px;margin:0 auto;padding:18px 24px 0;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
 .btn{cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 11px}
 .wiki{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;max-width:1200px;margin:0 auto;padding:16px 24px 40px}
-@media(max-width:820px){.wiki{grid-template-columns:1fr;padding:12px 14px}nav.top,.pagehead{padding-left:14px;padding-right:14px}}
+@media(max-width:820px){.wiki{grid-template-columns:1fr;padding:12px 14px}.toc{position:static;max-height:none;overflow:visible;margin-bottom:8px}nav.top,.pagehead{padding-left:14px;padding-right:14px}}
 .toc{position:sticky;top:12px;align-self:start;max-height:80vh;overflow:auto;font-size:14px}
 .toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 0}
 .toc a:hover{color:var(--brass)}.toc a.l2{padding-left:12px}.toc a.l3,.toc a.l4{padding-left:24px}
@@ -318,6 +318,8 @@ var BASE = ['Ослеплён','Очарован','Оглох','Испуган',
 // ===== ПОДСКАЗКИ ДЛЯ ПОЛЯ «ЗАМЕТКА К СОСТОЯНИЮ»: правьте здесь =====
 var NOTES = ['1 мин','10 мин','до конца сл. хода','до начала сл. хода'];
 var STATE_LIST = BASE.slice();
+var STAT_ORDER_DEFAULT=['header','hp','ministats','saves','skills','actions','legendary','spells','defenses'];
+var STAT_ORDER=STAT_ORDER_DEFAULT.slice(), settingsOrderDraft=null;
 var PC_NAMES = ['Ииска','Дариан','Омела','Фил','Драуг'];
 function newFightId(){ return 'fight-'+Date.now()+'-'+Math.random().toString(36).slice(2,9); }
 
@@ -370,44 +372,52 @@ function hpPct(cur,mx){ if(!mx || cur===''||cur==null||isNaN(cur)) return 0; ret
 function hpColor(p){ return p>50 ? 'var(--pc)' : p>25 ? 'var(--brass)' : 'var(--npc)'; }
 function spellInfo(N){ var parts=[]; if(N.showSpellInfo || N.mage){ if(N.dc!==''&&N.dc!=null) parts.push('<span>СЛ закл. <b>'+esc(N.dc)+'</b></span>'); if(N.spellAtk!==''&&N.spellAtk!=null) parts.push('<span>Мод. атаки закл. <b>'+esc(N.spellAtk)+'</b></span>'); } return parts.join(''); }
 function statHTML(c,N){
-  var u = c.used || (c.used = {a:{},s:{}}), mx = numOf(N.hp);
-  var avatar=N.tokenImage||N.image||''; var h = '<div class="blk" data-id="'+c.id+'"><a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700;display:flex;align-items:center" title="Открыть лист непися">'+(avatar?'<img class="npc-mini" src="'+escA(avatar)+'">':'')+esc(c.name)+'</a><div class="hpbox"><div class="hpcell"><span>Max ХП</span><b>'+(mx==null?'—':mx)+'</b></div><div class="hpcell cur"><span>Текущие ХП</span><input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></div><div class="hpcell dmg"><span>Урон</span><input class="damage" type="number" data-act="dmg" placeholder="0"></div><div class="hpbar"><i data-hpbar="'+c.id+'" style="width:'+hpPct(c.hp,mx)+'%;background:'+hpColor(hpPct(c.hp,mx))+'"></i></div></div><div class="ministats"><div><span>КД</span><b>'+esc(N.ac||'—')+'</b></div><div><span>БМ</span><b>'+dashS(N.cr)+'</b>'+''+'</div><div><span>П. вним.</span><b>'+dashS(passiveOf(N))+'</b></div></div>';
-  var sk = skillsLine(N); var sv = (N.saves||[]).map(function(k){ var st=STATS.filter(function(x){return x[0]===k;})[0]; return (st?st[1]:k.toUpperCase())+' '+fm(plus(mod((N.stats||{})[k]),numOf(N.cr)||0)); });
-  if(sv.length) h += '<p style="margin:8px 0 0"><b>Спасброски:</b> '+sv.join(', ')+'</p>';
-  if(sk) h += '<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>';
-  var ab = '';
+  var u=c.used||(c.used={a:{},s:{}}), mx=numOf(N.hp), avatar=N.tokenImage||N.image||'', blocks={};
+  blocks.header='<a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700;display:flex;align-items:center" title="Открыть лист непися">'+(avatar?'<img class="npc-mini" src="'+escA(avatar)+'">':'')+esc(c.name)+'</a>';
+  blocks.hp='<div class="hpbox"><div class="hpcell"><span>Max ХП</span><b>'+(mx==null?'—':mx)+'</b></div><div class="hpcell cur"><span>Текущие ХП</span><input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></div><div class="hpcell dmg"><span>Урон</span><input class="damage" type="number" data-act="dmg" placeholder="0"></div><div class="hpbar"><i data-hpbar="'+c.id+'" style="width:'+hpPct(c.hp,mx)+'%;background:'+hpColor(hpPct(c.hp,mx))+'"></i></div></div>';
+  var mini='<div class="ministats"><div><span>КД</span><b>'+esc(N.ac||'—')+'</b></div><div><span>БМ</span><b>'+dashS(N.cr)+'</b></div><div><span>П. вним.</span><b>'+dashS(passiveOf(N))+'</b></div>';
+  if(!N.mage&&spellInfo(N)) mini+='<div><span>СЛ закл.</span><b>'+dashS(N.dc)+'</b></div><div><span>Атака закл.</span><b>'+dashS(N.spellAtk)+'</b></div>';
+  blocks.ministats=mini+'</div>';
+  var sk=skillsLine(N), sv=(N.saves||[]).map(function(k){var st=STATS.filter(function(x){return x[0]===k;})[0];return (st?st[1]:k.toUpperCase())+' '+fm(plus(mod((N.stats||{})[k]),numOf(N.cr)||0));});
+  blocks.saves=sv.length?'<p style="margin:8px 0 0"><b>Спасброски:</b> '+sv.join(', ')+'</p>':'';
+  blocks.skills=sk?'<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>':'';
+  var ab='';
   (N.abilities||[]).forEach(function(a,i){
-    if(!a.tr && !a.note && !a.name && !a.text) return;
-    var n = +a.trn||1, used = u.a[i]||0, cells = '', period = a.trp==='round' ? 'р/раунд' : 'р/день', lk = !!(u.lock && u.lock[i]);
-    if(a.tr) for(var k=0;k<n;k++) cells += '<span class="slot'+(k<used?' used':'')+'" data-su="a" data-i="'+i+'" data-k="'+k+'"></span>';
-    var act = a.action ? '<span class="actbadge act-'+escA(a.action)+'">'+({d:'д',bd:'бд',r:'р'}[a.action]||'')+'</span>' : '';
-    ab += '<p style="margin:8px 0 0">'+act+'<b>'+esc(a.name||'Способность')+'</b>'+(a.tr ? ' <span class="note">'+n+' '+period+'</span> '+cells+(a.trp==='round' ? ' <button type="button" class="lockbtn'+(lk?' on':'')+'" data-lock="'+i+'" title="'+(lk?'Заблокировано от автосброса. Нажми, чтобы разблокировать':'Заблокировать от автосброса в начале раунда')+'">'+(lk?'🔒':'🔓')+'</button>' : '') : '')+(a.note ? '<br><span class="note">'+esc(a.note)+'</span>' : '')+'</p>';
+    if(!a.tr&&!a.note&&!a.name&&!a.text)return;
+    var n=+a.trn||1, used=u.a[i]||0, cells='', period=a.trp==='round'?'р/раунд':'р/день', lk=!!(u.lock&&u.lock[i]);
+    if(a.tr)for(var k=0;k<n;k++)cells+='<span class="slot'+(k<used?' used':'')+'" data-su="a" data-i="'+i+'" data-k="'+k+'"></span>';
+    var act=a.action?'<span class="actbadge act-'+escA(a.action)+'">'+({d:'д',bd:'бд',r:'р'}[a.action]||'')+'</span>':'';
+    var uses=''; if(a.tr){uses=' <span class="note">'+n+' '+period+'</span> '+cells; if(a.trp==='round') uses+=' <button type="button" class="lockbtn'+(lk?' on':'')+'" data-lock="'+i+'" title="'+(lk?'Заблокировано от автосброса. Нажми, чтобы разблокировать':'Заблокировать от автосброса в начале раунда')+'">'+(lk?'🔒':'🔓')+'</button>'; }
+    ab+='<p style="margin:8px 0 0">'+act+'<b>'+esc(a.name||'Способность')+'</b>'+uses+(a.note?'<br><span class="note">'+esc(a.note)+'</span>':'')+'</p>';
   });
   (N.attacks||[]).forEach(function(a){
-    var act = a.action ? '<span class="actbadge act-'+escA(a.action)+'">'+({d:'д',bd:'бд',r:'р'}[a.action]||'')+'</span>' : '';
-    ab += '<p style="margin:8px 0 0">'+act+'<b>'+esc(a.name||'Атака')+'</b>'+(a.hit ? ' <span class="note">'+esc(a.hit)+'</span>' : '')+(a.note ? '<br><span class="note">'+esc(a.note)+'</span>' : '')+'</p>';
+    var act=a.action?'<span class="actbadge act-'+escA(a.action)+'">'+({d:'д',bd:'бд',r:'р'}[a.action]||'')+'</span>':'';
+    ab+='<p style="margin:8px 0 0">'+act+'<b>'+esc(a.name||'Атака')+'</b>'+(a.hit?' <span class="note">'+esc(a.hit)+'</span>':'')+(a.note?'<br><span class="note">'+esc(a.note)+'</span>':'')+'</p>';
   });
-  if(ab) h += '<hr class="sep">'+ab;
-  if((N.lactions||[]).length || numOf(N.la)){
-    var totL = numOf(N.la)||0, usedL = (u.l||{})[0]||0, leftL = Math.max(0,totL-usedL), cellsL = '';
-    for(var q=0;q<totL;q++) cellsL += '<span class="slot'+(q<usedL?' used':'')+'" data-su="l" data-i="0" data-k="'+q+'"></span>';
-    h += '<hr class="sep"><div class="spellhead"><b>Легендарные действия</b><div class="dcbox"><span>Очки ЛД</span><b>'+leftL+'/'+totL+'</b></div></div>'+(totL ? '<div style="margin-bottom:6px">'+cellsL+'</div>' : '');
-    (N.lactions||[]).forEach(function(a,i){
-      var cost = +a.cost||1, dis = leftL<cost;
-      h += '<button type="button" class="la-act'+(dis?' dis':'')+'" data-la="'+i+'" title="'+(dis?'Не хватает очков':'Применить: −'+cost+' ОЛД')+'"><span class="cost">−'+cost+'</span><b>'+esc(a.name||'Действие')+'</b>'+(a.note?'<span class="note">'+esc(a.note)+'</span>':'')+'</button>';
-    });
+  blocks.actions=ab?'<hr class="sep">'+ab:'';
+  var la='';
+  if((N.lactions||[]).length||numOf(N.la)){
+    var totL=numOf(N.la)||0,usedL=(u.l||{})[0]||0,leftL=Math.max(0,totL-usedL),cellsL='';
+    for(var q=0;q<totL;q++)cellsL+='<span class="slot'+(q<usedL?' used':'')+'" data-su="l" data-i="0" data-k="'+q+'"></span>';
+    la='<hr class="sep"><div class="spellhead"><b>Легендарные действия</b><div class="dcbox"><span>Очки ЛД</span><b>'+leftL+'/'+totL+'</b></div></div>'+(totL?'<div style="margin-bottom:6px">'+cellsL+'</div>':'');
+    (N.lactions||[]).forEach(function(a,i){var cost=+a.cost||1,dis=leftL<cost;la+='<button type="button" class="la-act'+(dis?' dis':'')+'" data-la="'+i+'" title="'+(dis?'Не хватает очков':'Применить: −'+cost+' ОЛД')+'"><span class="cost">−'+cost+'</span><b>'+esc(a.name||'Действие')+'</b>'+(a.note?'<span class="note">'+esc(a.note)+'</span>':'')+'</button>';});
   }
+  blocks.legendary=la;
+  var spell='';
   if(N.mage){
-    var rows = '';
-    for(var l=1;l<=9;l++){ var cnt = (N.slots||{})[l]||0; if(!cnt) continue; var us = u.s[l]||0, cl = ''; for(var k=0;k<cnt;k++) cl += '<span class="slot'+(k<us?' used':'')+'" data-su="s" data-i="'+l+'" data-k="'+k+'"></span>'; var sp = spellLinks((N.spells||{})[l]); rows += '<tr><td>'+l+'</td><td>'+cl+(sp?'<div class="spl">'+sp+'</div>':'')+'</td></tr>'; }
-    var cz = spellLinks((N.spells||{})[0]); if(cz) rows = '<tr><td>Заг.</td><td><div class="spl">'+cz+'</div></td></tr>'+rows;
-    if(rows || spellInfo(N)) h += '<hr class="sep"><div class="spellblock"><div class="spellhead"><b>Ячейки заклинаний</b>'+(spellInfo(N) ? '<div class="spellparams">'+spellInfo(N)+'</div>' : '')+'</div>'+(rows?'<table class="st">'+rows+'</table>':'')+'</div>';
-  } else if(spellInfo(N)) {
-    h += '<div class="spellblock spellblock-small"><div class="spellparams">'+spellInfo(N)+'</div></div>';
-  }
-  [['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость']].forEach(function(l){ if((N[l[0]]||[]).length) h += '<p style="margin:8px 0 0"><b>'+l[1]+':</b> '+N[l[0]].map(esc).join(', ')+'</p>'; });
-  return h + '</div>';
+    var rows='';
+    for(var l=1;l<=9;l++){var cnt=(N.slots||{})[l]||0;if(!cnt)continue;var us=u.s[l]||0,cl='';for(var k=0;k<cnt;k++)cl+='<span class="slot'+(k<us?' used':'')+'" data-su="s" data-i="'+l+'" data-k="'+k+'"></span>';var sp=spellLinks((N.spells||{})[l]);rows+='<tr><td>'+l+'</td><td>'+cl+(sp?'<div class="spl">'+sp+'</div>':'')+'</td></tr>';}
+    var cz=spellLinks((N.spells||{})[0]);if(cz)rows='<tr><td>Заг.</td><td><div class="spl">'+cz+'</div></td></tr>'+rows;
+    if(rows||spellInfo(N))spell='<hr class="sep"><div class="spellblock"><div class="spellhead"><b>Ячейки заклинаний</b>'+(spellInfo(N)?'<div class="spellparams">'+spellInfo(N)+'</div>':'')+'</div>'+(rows?'<table class="st">'+rows+'</table>':'')+'</div>';
+  }else if(spellInfo(N))spell='<div class="spellblock spellblock-small"><div class="spellparams">'+spellInfo(N)+'</div></div>';
+  blocks.spells=N.mage?spell:'';
+  var def='';[['imm','Иммунитет'],['res','Сопротивление'],['vul','Уязвимость']].forEach(function(l){if((N[l[0]]||[]).length)def+='<p style="margin:8px 0 0"><b>'+l[1]+':</b> '+N[l[0]].map(esc).join(', ')+'</p>';});
+  blocks.defenses=def;
+  var order=Array.isArray(STAT_ORDER)?STAT_ORDER.slice():STAT_ORDER_DEFAULT.slice(), h='<div class="blk" data-id="'+c.id+'">';
+  order.forEach(function(k){if(blocks[k])h+=blocks[k];});
+  return h+'</div>';
 }
+
 function renderStat(){
   var cur = '', rest = '';
   if(isGM()) S.creatures.forEach(function(c){
@@ -800,29 +810,16 @@ function seedLore(){
   ['ket','imp'].forEach(function(k){ if(LORE[k]==null && old[k]) fdb.collection('lore').doc(k).set({text:old[k]}); });
 }
 function mergeTags(sn){
-  sn.docChanges().forEach(function(ch){
-    if(ch.type!=='added') return;
-    var d = ch.doc.data(), c = find(d.cid);
-    if(d.fightId!==S.fightId){ ch.doc.ref.delete(); return; }
-    if(c && c.pc && c.active && d.t){
-      var ex = c.tags.filter(function(x){ return x.t===d.t; })[0];
-      if(ex){ ex.note = d.note||''; ex.dur = d.dur; ex.start = S.round; } else c.tags.push({t:d.t, note:d.note||'', dur:d.dur, start:S.round});
-    }
-    ch.doc.ref.delete();
-  });
-  render();
+  var refs=[],changed=false;
+  sn.docChanges().forEach(function(ch){if(ch.type!=='added')return;var d=ch.doc.data(),c=find(d.cid);if(d.fightId!==S.fightId){refs.push(ch.doc.ref);return;}if(c&&c.pc&&c.active&&d.t){var ex=c.tags.filter(function(x){return x.t===d.t;})[0];if(ex){ex.note=d.note||'';ex.dur=d.dur;ex.start=S.round;}else c.tags.push({t:d.t,note:d.note||'',dur:d.dur,start:S.round});changed=true;refs.push(ch.doc.ref);}});
+  if(changed){render();flushCombat().then(function(){refs.forEach(function(r){r.delete().catch(function(){});});}).catch(function(err){fbErr=err.message;});}else refs.forEach(function(r){r.delete().catch(function(){});});
 }
+
 var pushT = null;
-function pushCombat(){
-  if(!fdb || !isGM()) return;
-  clearTimeout(pushT);
-  pushT = setTimeout(function(){
-    var data = {conditions:STATE_LIST.slice(), fightId:S.fightId, round:S.round, turn:S.turn||'', creatures:S.creatures.filter(function(c){ return c.active; }).map(function(c){
-      return {id:c.id, name:c.name, pc:!!c.pc, init:(c.init===''||c.init==null)?'':+c.init, tags:c.pc ? c.tags.map(function(t){ return {t:t.t, note:t.note||'', dur:t.dur==null?'':t.dur, start:t.start==null?0:t.start}; }) : []};
-    })};
-    fdb.collection('combat').doc('state').set(data,{merge:true}).catch(function(){});
-  }, 600);
-}
+function combatData(){return {conditions:STATE_LIST.slice(),statOrder:STAT_ORDER.slice(),fightId:S.fightId,round:S.round,turn:S.turn||'',creatures:S.creatures.filter(function(c){return c.active;}).map(function(c){return {id:c.id,name:c.name,pc:!!c.pc,init:(c.init===''||c.init==null)?'':+c.init,tags:c.pc?c.tags.map(function(t){return {t:t.t,note:t.note||'',dur:t.dur==null?'':t.dur,start:t.start==null?0:t.start};}):[]};})};}
+function flushCombat(){if(!fdb||!isGM())return Promise.reject(new Error('Нет прав мастера или подключения'));return fdb.collection('combat').doc('state').set(combatData(),{merge:true});}
+function pushCombat(){if(!fdb||!isGM())return;clearTimeout(pushT);pushT=setTimeout(function(){flushCombat().catch(function(){});},600);}
+
 
 try{
   firebase.initializeApp(FBCFG);
@@ -840,7 +837,7 @@ try{
       listen(fdb.collection('lore'), function(sn){ LORE = {}; sn.docs.forEach(function(d){ LORE[d.id] = d.data().text; }); seedLore(); refreshAll(); });
       if(gm) listen(fdb.collection('playerTags'), mergeTags);
       listen(fdb.collection('combat').doc('state'), function(doc){
-        if(doc.exists){ COMBAT=doc.data()||{}; if(Array.isArray(COMBAT.conditions)){ STATE_LIST=COMBAT.conditions.map(function(x){return String(x);}); if(settingsConditionsDraft===null) settingsConditionsDraft=STATE_LIST.slice(); } }
+        if(doc.exists){ COMBAT=doc.data()||{}; if(Array.isArray(COMBAT.conditions)){ STATE_LIST=COMBAT.conditions.map(function(x){return String(x);}); if(settingsConditionsDraft===null) settingsConditionsDraft=STATE_LIST.slice(); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } if(Array.isArray(COMBAT.statOrder)){ STAT_ORDER=COMBAT.statOrder.filter(function(k){return STAT_ORDER_DEFAULT.indexOf(k)>-1;}); STAT_ORDER_DEFAULT.forEach(function(k){if(STAT_ORDER.indexOf(k)<0)STAT_ORDER.push(k);}); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } }
         else COMBAT=null;
         if(COMBAT && COMBAT.creatures) COMBAT.creatures.forEach(function(c){ if(c.name==='Амелия') c.name='Омела'; });
         renderQueue(); if(location.hash==='#settings' && isGM()) renderSettings();
@@ -852,15 +849,16 @@ try{
 
 var settingsConditionsDraft = null;
 function renderSettings(){
-  var R=$('settingsRoot'); if(!R) return;
-  if(!isGM()){ R.innerHTML='<h1>Только для мастера</h1>'; return; }
-  if(settingsConditionsDraft===null) settingsConditionsDraft=STATE_LIST.slice();
-  R.innerHTML='<div class="bar" style="justify-content:space-between"><h1>Настройки</h1><button class="bigY" id="saveConditions">Сохранить список</button></div><div class="blk"><h2 style="margin-top:0">Состояния</h2><p class="note">Этот список используется в подсказках при добавлении состояний в бою. Можно добавлять, переименовывать и удалять варианты. Пользовательские состояния, введённые вручную, по-прежнему разрешены.</p><div id="conditionSettingsList">'+settingsConditionsDraft.map(function(x,i){return '<div class="bar" style="margin:6px 0"><input data-condition-index="'+i+'" value="'+escA(x)+'" style="flex:1"><button class="small" data-remove-condition="'+i+'" title="Удалить">×</button></div>';}).join('')+'</div><div class="bar" style="margin-top:10px"><input id="newCondition" placeholder="Новое состояние"><button id="addCondition" class="bigY">Добавить</button></div><p class="note" id="settingsMsg"></p></div>';
+  var R=$('settingsRoot');if(!R)return;if(!isGM()){R.innerHTML='<h1>Только для мастера</h1>';return;}
+  if(settingsConditionsDraft===null)settingsConditionsDraft=STATE_LIST.slice();if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice();
+  var labels={header:'Имя и портрет',hp:'ХП',ministats:'КД / БМ / П. вним. / маг. параметры',saves:'Спасброски',skills:'Навыки',actions:'Способности и атаки',legendary:'Легендарные действия',spells:'Ячейки заклинаний',defenses:'Иммунитеты / сопротивления / уязвимости'};
+  R.innerHTML='<div class="bar" style="justify-content:space-between"><h1>Настройки</h1><button class="bigY" id="saveConditions">Сохранить настройки</button></div><div class="blk"><h2 style="margin-top:0">Состояния</h2><p class="note">Список подсказок при добавлении состояний в бою. Пользовательские состояния можно вводить вручную.</p><div id="conditionSettingsList">'+settingsConditionsDraft.map(function(x,i){return '<div class="bar" style="margin:6px 0"><input data-condition-index="'+i+'" value="'+escA(x)+'" style="flex:1"><button class="small" data-remove-condition="'+i+'">×</button></div>';}).join('')+'</div><div class="bar" style="margin-top:10px"><input id="newCondition" placeholder="Новое состояние"><button id="addCondition" class="bigY">Добавить</button></div></div><div class="blk"><h2 style="margin-top:0">Порядок блоков статблока NPC</h2><p class="note">Настрой порядок отображения информации в боевом статблоке. Перемещай блоки стрелками.</p><div id="statOrderList">'+settingsOrderDraft.map(function(k,i){return '<div class="bar" style="margin:6px 0"><span style="flex:1">'+esc(labels[k]||k)+'</span><button class="small" data-order-up="'+i+'"'+(i===0?' disabled':'')+'>↑</button><button class="small" data-order-down="'+i+'"'+(i===settingsOrderDraft.length-1?' disabled':'')+'>↓</button></div>';}).join('')+'</div></div><p class="note" id="settingsMsg"></p>';
   R.querySelectorAll('[data-condition-index]').forEach(function(inp){inp.addEventListener('input',function(){settingsConditionsDraft[+inp.dataset.conditionIndex]=inp.value;});});
   R.querySelectorAll('[data-remove-condition]').forEach(function(btn){btn.onclick=function(){settingsConditionsDraft.splice(+btn.dataset.removeCondition,1);renderSettings();};});
   $('addCondition').onclick=function(){var v=$('newCondition').value.trim();if(!v)return;if(settingsConditionsDraft.indexOf(v)<0)settingsConditionsDraft.push(v);renderSettings();};
   $('newCondition').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('addCondition').click();}});
-  $('saveConditions').onclick=function(){var cleaned=settingsConditionsDraft.map(function(x){return String(x||'').trim();}).filter(Boolean).filter(function(x,i,a){return a.indexOf(x)===i;});STATE_LIST=cleaned;settingsConditionsDraft=cleaned.slice();if(!fdb){$('settingsMsg').textContent='Нет подключения к базе данных.';return;}fdb.collection('combat').doc('state').set({conditions:cleaned},{merge:true}).then(function(){ $('settingsMsg').textContent='Список сохранён.'; }).catch(function(err){$('settingsMsg').textContent='Не удалось сохранить: '+err.message;});};
+  R.querySelectorAll('[data-order-up],[data-order-down]').forEach(function(btn){btn.onclick=function(){var i=+(btn.dataset.orderUp!=null?btn.dataset.orderUp:btn.dataset.orderDown),j=i+(btn.dataset.orderUp!=null?-1:1);if(j<0||j>=settingsOrderDraft.length)return;var x=settingsOrderDraft[i];settingsOrderDraft[i]=settingsOrderDraft[j];settingsOrderDraft[j]=x;renderSettings();};});
+  $('saveConditions').onclick=function(){var cleaned=settingsConditionsDraft.map(function(x){return String(x||'').trim();}).filter(Boolean).filter(function(x,i,a){return a.indexOf(x)===i;});STATE_LIST=cleaned;settingsConditionsDraft=cleaned.slice();STAT_ORDER=settingsOrderDraft.slice();if(!fdb){$('settingsMsg').textContent='Нет подключения к базе данных.';return;}fdb.collection('combat').doc('state').set({conditions:cleaned,statOrder:STAT_ORDER},{merge:true}).then(function(){$('settingsMsg').textContent='Настройки сохранены.';}).catch(function(err){$('settingsMsg').textContent='Не удалось сохранить: '+err.message;});};
 }
 
 function renderLogin(msg){
@@ -992,14 +990,14 @@ function formHTML(){
   h += '<div class="fld"><label>Описание</label><textarea data-p="desc">'+esc(e.desc||'')+'</textarea></div>';
   e.abilities.forEach(function(a,i){
     var P = 'abilities.'+i+'.';
-    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Способность</b><button class="small" data-a="rmAb" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название',a.name)+'<div class="fld"><label>Тип действия</label><select data-p="'+P+'action"><option value="">—</option><option value="d"'+(a.action==='d'?' selected':'')+'>д — действие</option><option value="bd"'+(a.action==='bd'?' selected':'')+'>бд — бонусное действие</option><option value="r"'+(a.action==='r'?' selected':'')+'>р — реакция</option></select></div><div class="fld note-field"><label>Краткая заметка</label><textarea data-p="'+P+'note">'+esc(a.note||'')+'</textarea></div>'+'<div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div>'
+    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Способность</b><button class="small" data-move-ab="'+i+'" data-dir="-1" title="Вверх">↑</button><button class="small" data-move-ab="'+i+'" data-dir="1" title="Вниз">↓</button><button class="small" data-a="rmAb" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название',a.name)+'<div class="fld"><label>Тип действия</label><select data-p="'+P+'action"><option value="">—</option><option value="d"'+(a.action==='d'?' selected':'')+'>д — действие</option><option value="bd"'+(a.action==='bd'?' selected':'')+'>бд — бонусное действие</option><option value="r"'+(a.action==='r'?' selected':'')+'>р — реакция</option></select></div><div class="fld note-field"><label>Краткая заметка</label><textarea data-p="'+P+'note">'+esc(a.note||'')+'</textarea></div>'+'<div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div>'
       +'<div class="fld"><label><input type="checkbox" data-p="'+P+'tr" data-re="1" style="width:auto"'+(a.tr?' checked':'')+'> Трекер</label>'+(a.tr?'<select data-p="'+P+'trn" data-num="1">'+[1,2,3,4,5,6].map(function(c){ return '<option value="'+c+'"'+((+a.trn||1)===c?' selected':'')+'>'+c+' раз</option>'; }).join('')+'</select><select data-p="'+P+'trp"><option value="day"'+(a.trp!=='round'?' selected':'')+'>в день</option><option value="round"'+(a.trp==='round'?' selected':'')+'>за раунд</option></select>':'')+'</div>'
       +'<div class="fld"><label><input type="checkbox" data-p="'+P+'rc" data-re="1" style="width:auto"'+(a.rc?' checked':'')+'> Перезарядка</label>'+(a.rc?'<div class="chips">'+[4,5,6].map(function(c){ return chip(P+'rcv',c,c,(a.rcv||[]).indexOf(c)>-1||(a.rcv||[]).indexOf(''+c)>-1); }).join('')+'</div>':'')+'</div></div>';
   });
   h += '<button data-a="addAb">Добавить способность</button>';
   e.attacks.forEach(function(a,i){
     var P = 'attacks.'+i+'.';
-    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Атака</b><button class="small" data-a="rmAt" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название атаки',a.name)+F(P+'hit','На попадание',a.hit)+'<div class="fld"><label>Тип действия</label><select data-p="'+P+'action"><option value="">—</option><option value="d"'+(a.action==='d'?' selected':'')+'>д — действие</option><option value="bd"'+(a.action==='bd'?' selected':'')+'>бд — бонусное действие</option><option value="r"'+(a.action==='r'?' selected':'')+'>р — реакция</option></select></div><div class="fld note-field"><label>Краткая заметка</label><textarea data-p="'+P+'note">'+esc(a.note||'')+'</textarea></div><div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
+    h += '<div class="blk"><div class="bar" style="justify-content:space-between"><b>Атака</b><button class="small" data-move-at="'+i+'" data-dir="-1" title="Вверх">↑</button><button class="small" data-move-at="'+i+'" data-dir="1" title="Вниз">↓</button><button class="small" data-a="rmAt" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название атаки',a.name)+F(P+'hit','На попадание',a.hit)+'<div class="fld"><label>Тип действия</label><select data-p="'+P+'action"><option value="">—</option><option value="d"'+(a.action==='d'?' selected':'')+'>д — действие</option><option value="bd"'+(a.action==='bd'?' selected':'')+'>бд — бонусное действие</option><option value="r"'+(a.action==='r'?' selected':'')+'>р — реакция</option></select></div><div class="fld note-field"><label>Краткая заметка</label><textarea data-p="'+P+'note">'+esc(a.note||'')+'</textarea></div><div class="fld"><label>Текст способности</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
   });
   h += ' <button data-a="addAt">Добавить атаку</button>';
   h += '<div class="blk"><b>Легендарные действия</b><div class="fld"><label>Очков ЛД в пуле (обновляется в начале хода непися)</label><input type="number" min="0" data-p="la" data-num="1" style="width:120px" value="'+escA(e.la==null?'':e.la)+'"></div>';
@@ -1055,6 +1053,8 @@ function bindSheet(R){
       b.classList.toggle('on'); refreshMods(); return;
     }
     var a = b.dataset.a, i = +b.dataset.i;
+    if(b.dataset.moveAb!=null){i=+b.dataset.moveAb;var j=i+(+b.dataset.dir);if(j>=0&&j<ed.abilities.length){var z=ed.abilities[i];ed.abilities[i]=ed.abilities[j];ed.abilities[j]=z;again();}return;}
+    if(b.dataset.moveAt!=null){i=+b.dataset.moveAt;var j=i+(+b.dataset.dir);if(j>=0&&j<ed.attacks.length){var z=ed.attacks[i];ed.attacks[i]=ed.attacks[j];ed.attacks[j]=z;again();}return;}
     if(a==='login') login();
     else if(a==='logout') fauth.signOut();
     else if(a==='clearImage'){ ed.image=''; ed.tokenImage=''; again(); }
