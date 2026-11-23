@@ -357,8 +357,8 @@ function tagHTML(t,i,r,ro){
   if(t.note || d) cls += ' has-note';
   return (ro ? '<span class="'+cls+'">' : '<button class="'+cls+'" data-act="tag" data-i="'+i+'" title="Снять состояние">')+'<span class="tt">'+esc(t.t)+'</span>'+(t.note?'<span class="tn">* '+esc(t.note)+'</span>':'')+d+(ro?'</span>':'</button>');
 }
-var GM_UID = 'CJwMZ3ABF7OLYhLL3iMRQ5TTBBy2';
-function isGM(){ return typeof user!=='undefined' && !!user && user.uid===GM_UID; }
+var GM_UIDS = ['CJwMZ3ABF7OLYhLL3iMRQ5TTBBy2','dAABeaA114agerkZdP8BPqTMPLF2'];
+function isGM(){ return typeof user!=='undefined' && !!user && GM_UIDS.indexOf(user.uid)!==-1; }
 function dashS(x){ return (x==null||x==='') ? '—' : esc(x); }
 function numOf(x){ var m = String(x==null?'':x).match(/-?\d+/); return m ? +m[0] : null; }
 function npcOf(c){ return (c.npcId && typeof NPCS!=='undefined' && NPCS) ? NPCS.filter(function(x){ return x.id===c.npcId; })[0] : null; }
@@ -831,7 +831,7 @@ try{
     NPCS = null; PCS = null; COMBAT = null;
     $('authBox').innerHTML = u ? esc(u.email||'')+' <button class="small" id="logoutBtn">Выйти</button>' : '';
     if(u){
-      var gm = u.uid===GM_UID;
+      var gm = isGM();
       if(gm) listen(fdb.collection('npcs'), function(sn){ NPCS = docs(sn); refreshAll(); });
       listen(fdb.collection('pcs'), function(sn){ PCS = docs(sn); refreshAll(); });
       listen(fdb.collection('lore'), function(sn){ LORE = {}; sn.docs.forEach(function(d){ LORE[d.id] = d.data().text; }); seedLore(); refreshAll(); });
