@@ -212,6 +212,9 @@ body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
 
 /* Unified, full-width two-column editors: predictable gutters and balanced columns */
 .npcwrap:has(.npc-edit-layout),.npcwrap:has(.settings-stat-layout){width:100%;max-width:none;margin:0;padding:60px clamp(18px,2.2vw,40px) 48px}
+/* Lift page action/title bars without moving the editor and preview columns */
+.npcwrap:has(.npc-edit-layout)>.bar:first-child,
+.npcwrap:has(.settings-stat-layout)>.bar:first-child{position:relative;top:-38px;margin-bottom:-38px!important;}
 .npc-edit-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(560px,1fr);gap:26px;align-items:start;width:100%;max-width:1900px;margin:0 auto;padding:0;box-sizing:border-box}
 .npc-edit-main,.npc-edit-preview{min-width:0}
 .npc-edit-main>.bar:first-child{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px}
