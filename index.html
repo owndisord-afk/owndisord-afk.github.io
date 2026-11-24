@@ -209,6 +209,20 @@ body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
 /* Fantasy calendar */
 .calendar-page{max-width:1500px;margin:0 auto;padding:18px;display:flex;flex-direction:column;gap:16px}.calendar-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}.calendar-head h1{margin:0}.calendar-year-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.calendar-year-tools strong{min-width:80px;text-align:center}.cal-year-name{font-size:13px;color:var(--muted);white-space:nowrap}.cal-leap{display:flex;align-items:center;gap:6px;font-size:13px}.calendar-current{border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:rgba(232,173,72,.12);color:var(--gold);font-weight:600}.calendar-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}.calendar-panel,.calendar-note-panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:14px;min-width:0}.calendar-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.calendar-panel-head h2{margin:0;font-size:20px}.calendar-panel-head select{max-width:220px}.calendar-month-sub{color:var(--muted);font-size:12px;margin:6px 0 12px}.calendar-grid{display:grid;gap:5px}.imperial-grid{grid-template-columns:repeat(10,minmax(0,1fr))}.ket-grid{grid-template-columns:repeat(7,minmax(0,1fr))}.calendar-day{min-height:46px;border:1px solid var(--line);border-radius:7px;background:var(--bg2);color:var(--text);padding:5px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;cursor:pointer;position:relative}.calendar-day:hover{border-color:var(--gold);background:rgba(232,173,72,.1)}.calendar-day .day-num{font-weight:700}.calendar-day .day-name{font-size:10px;line-height:1.15;color:var(--muted)}.calendar-day.selected{outline:2px solid #65b9ff;outline-offset:0;border-color:#65b9ff}.calendar-day.current{background:#e88b28!important;color:#21172b!important;border-color:#e88b28!important;box-shadow:0 0 0 1px #e88b28}.calendar-day.current .day-name{color:#3c2a17!important}.calendar-day.current.selected{outline:3px solid #65b9ff;outline-offset:1px}.calendar-colhead{font-size:10px;text-align:center;color:var(--muted);padding:3px 1px;line-height:1.15;font-weight:600}.calendar-day.has-note:after{content:'•';position:absolute;right:5px;top:2px;color:#62c7ff;font-size:16px}.calendar-day.holiday{background:rgba(155,99,199,.18);border-color:#9b63c7}.calendar-day.holiday.current{background:var(--gold)}.calendar-holidays{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.calendar-special{border:1px dashed #9b63c7;background:rgba(155,99,199,.12);border-radius:8px;padding:8px 10px;color:var(--text);cursor:pointer}.calendar-special.current{border:2px solid var(--gold);background:rgba(232,173,72,.15)}.calendar-note-panel{display:grid;grid-template-columns:1fr minmax(260px,1fr);gap:14px;align-items:start}.calendar-note-panel textarea{width:100%;resize:vertical;min-height:110px}.calendar-note-actions{grid-column:2;display:flex;justify-content:space-between;align-items:center;gap:10px}.calendar-selected h3{margin:0 0 8px}.calendar-selected .cross-date{margin:4px 0;padding:6px 0;border-bottom:1px solid var(--line)}.calendar-selected .cross-date:last-child{border-bottom:0}.calendar-selected .date-highlight{color:var(--gold);font-weight:700}.calendar-note-panel label{display:flex;flex-direction:column;gap:6px}.calendar-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}@media(max-width:900px){.calendar-columns{grid-template-columns:1fr}.calendar-note-panel{grid-template-columns:1fr}.calendar-note-actions{grid-column:1}.imperial-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.calendar-day{min-height:42px}.calendar-panel-head{align-items:flex-start;flex-direction:column}.calendar-panel-head select{max-width:none;width:100%}}@media(max-width:500px){.calendar-page{padding:8px}.imperial-grid,.ket-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.calendar-day{min-height:40px;padding:4px}.calendar-year-tools{width:100%}.calendar-year-tools button{flex:1}}
 
+
+/* NPC editor: form on the left, live combat statblock preview on the right */
+.npc-edit-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr);gap:18px;align-items:start}
+.npc-edit-main{min-width:0}
+.npc-edit-preview{min-width:0;position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto}
+.npc-edit-preview .npc-live-preview{margin-top:0}
+@media(max-width:1050px){.npc-edit-layout{grid-template-columns:minmax(0,1fr)}.npc-edit-preview{position:static;max-height:none;overflow:visible}}
+
+
+/* NPC sheet live statblock preview docked on the right */
+.npc-live-preview{position:fixed;right:20px;top:84px;width:min(340px,28vw);max-height:calc(100vh - 110px);overflow:auto;z-index:30;box-shadow:0 8px 28px rgba(0,0,0,.28);background:var(--panel);}
+.npc-live-preview h2{font-size:17px}
+@media(max-width:1100px){.npc-live-preview{position:static;width:auto;max-height:none;box-shadow:none;}}
+
 </style>
 </head>
 <body>
@@ -441,7 +455,7 @@ function hpPct(cur,mx){ if(!mx || cur===''||cur==null||isNaN(cur)) return 0; ret
 function hpColor(p){ return p>50 ? 'var(--pc)' : p>25 ? 'var(--brass)' : 'var(--npc)'; }
 function spellInfo(N){ var parts=[]; if(N.showSpellInfo || N.mage){ if(N.dc!==''&&N.dc!=null) parts.push('<span>СЛ закл. <b>'+esc(N.dc)+'</b></span>'); if(N.spellAtk!==''&&N.spellAtk!=null) parts.push('<span>Мод. атаки закл. <b>'+esc(N.spellAtk)+'</b></span>'); } return parts.join(''); }
 function statHTML(c,N){
-  var u=c.used||(c.used={a:{},s:{}}), mx=numOf(N.hp), avatar=N.tokenImage||N.image||'', blocks={};
+  var u=c.used||(c.used={}), mx=numOf(N.hp); if(!u.a)u.a={}; if(!u.s)u.s={}; if(!u.l)u.l={}; mx=numOf(N.hp), avatar=N.tokenImage||N.image||'', blocks={};
   blocks.header='<a href="#npc/'+N.id+'" target="_blank" rel="noopener" style="color:var(--text);font-size:18px;font-weight:700;display:flex;align-items:center" title="Открыть лист непися">'+(avatar?'<img class="npc-mini" src="'+escA(avatar)+'">':'')+esc(c.name)+'</a>';
   blocks.hp='<div class="hpbox"><div class="hpcell"><span>Max ХП</span><b>'+(mx==null?'—':mx)+'</b></div><div class="hpcell cur"><span>Текущие ХП</span><input type="number" data-hpid="'+c.id+'" data-act="hp" value="'+(c.hp==null?'':c.hp)+'"></div><div class="hpcell dmg"><span>Урон</span><input class="damage" type="number" data-act="dmg" placeholder="0"></div><div class="hpbar"><i data-hpbar="'+c.id+'" style="width:'+hpPct(c.hp,mx)+'%;background:'+hpColor(hpPct(c.hp,mx))+'"></i></div></div>';
   var mini='<div class="ministats"><div><span>КД</span><b>'+esc(N.ac||'—')+'</b></div><div><span>БМ</span><b>'+dashS(N.cr)+'</b></div><div><span>П. вним.</span><b>'+dashS(passiveOf(N))+'</b></div>';
@@ -1041,7 +1055,7 @@ try{
 }catch(e){ fbErr = String(e); authReady = true; }
 
 var settingsConditionsDraft = null;
-function settingsPreviewHTML(n){if(!n)return '<p class="note">Создайте NPC, чтобы увидеть предпросмотр.</p>';var old=STAT_ORDER;STAT_ORDER=settingsOrderDraft.slice();var html=statHTML({id:'settings-preview',name:n.name,hp:n.hp,used:{}},n);STAT_ORDER=old;return html;}
+function settingsPreviewHTML(n){if(!n)return '<p class="note">Создайте NPC, чтобы увидеть предпросмотр.</p>';var old=STAT_ORDER;STAT_ORDER=settingsOrderDraft.slice();var html=statHTML({id:'settings-preview',name:n.name,hp:n.hp,used:{a:{},s:{},l:{},lock:{}}},n);STAT_ORDER=old;return html;}
 function renderSettings(){
   var R=$('settingsRoot');if(!R)return;if(!isGM()){R.innerHTML='<h1>Только для мастера</h1>';return;}
   if(settingsConditionsDraft===null)settingsConditionsDraft=STATE_LIST.slice();if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice();
@@ -1121,7 +1135,7 @@ function renderNpc(parts){
   if(p[1]==='new'){ if(!ed){ ed = blank(); edId = null; } R.innerHTML = formHTML(); return; }
   var n = D.filter(function(x){ return x.id===p[1]; })[0];
   if(!n){ R.innerHTML = '<p class="note">Не найдено. <a href="#'+HK+'" style="color:var(--pc)">К списку</a></p>'; return; }
-  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = Object.assign(blank(), JSON.parse(JSON.stringify(n))); ed.abilities=(ed.abilities||[]).map(function(a){return Object.assign({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''},a);}); ed.attacks=(ed.attacks||[]).map(function(a){return Object.assign({name:'',hit:'',note:'',text:'',action:''},a);}); ed.lactions=(ed.lactions||[]).map(function(a){return Object.assign({name:'',cost:1,note:'',text:''},a);}); edId = n.id; } R.innerHTML = formHTML(); var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{}},ed);}catch(err){preview.innerHTML='<p class="note">Не удалось построить предпросмотр: '+esc(err.message||err)+'</p>';}} }
+  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = Object.assign(blank(), JSON.parse(JSON.stringify(n))); ed.abilities=(ed.abilities||[]).map(function(a){return Object.assign({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''},a);}); ed.attacks=(ed.attacks||[]).map(function(a){return Object.assign({name:'',hit:'',note:'',text:'',action:''},a);}); ed.lactions=(ed.lactions||[]).map(function(a){return Object.assign({name:'',cost:1,note:'',text:''},a);}); edId = n.id; } R.innerHTML = formHTML(); var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{a:{},s:{},l:{},lock:{}}},ed);}catch(err){preview.innerHTML='<p class="note">Не удалось построить предпросмотр: '+esc(err.message||err)+'</p>';}} }
   else { ed = null; R.innerHTML = sheetHTML(n); }
 }
 
@@ -1179,6 +1193,7 @@ function imageFileToData(file,maxDim,quality){
 }
 function formHTML(){
   var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?'Редактирование NPC':'Новый NPC')+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
+  h += '<div class="npc-edit-layout"><div class="npc-edit-main">';
   h += '<div class="blk"><b>Изображение NPC</b><div class="fld"><label>Загрузить PNG / JPEG</label><input type="file" accept="image/png,image/jpeg,image/webp" data-image-upload="npc"><p class="note">Изображение автоматически уменьшится для хранения. '+((e.image||e.tokenImage)?'<img class="npc-sheet-image" src="'+escA(e.tokenImage||e.image)+'" alt="">':'')+'</p><button type="button" class="small" data-a="clearImage">Удалить изображение</button></div></div>' + F('name','Имя',e.name)+'<div class="grid" style="grid-template-columns:repeat(4,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+'<div class="fld"><label>П. вним.</label><div class="big pvbox" id="pvv">'+(passiveOf(e)==null?'—':passiveOf(e))+'</div></div>'+F('hp','max ХП',e.hp,'big')+'</div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="mage" data-re="1" style="width:auto"'+(e.mage?' checked':'')+'> Маг</label></div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="showSpellInfo" style="width:auto"'+(e.showSpellInfo?' checked':'')+'> Показывать СЛ спасброска и модификатор атаки заклинанием в статблоке</label></div>';
@@ -1213,10 +1228,10 @@ function formHTML(){
     h += '<div class="blk" style="background:var(--panel2)"><div class="bar" style="justify-content:space-between"><b>Действие</b><button class="small" data-a="rmLa" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название',a.name)+'<div class="fld"><label>Стоимость (очков ЛД)</label><select data-p="'+P+'cost" data-num="1">'+[1,2,3,4,5].map(function(c){ return '<option value="'+c+'"'+((+a.cost||1)===c?' selected':'')+'>'+c+'</option>'; }).join('')+'</select></div>'+'<div class="fld note-field"><label>Краткое описание (видно в статблоке)</label><textarea data-p="'+P+'note">'+esc(a.note||'')+'</textarea></div>'+'<div class="fld"><label>Полное описание (только в листе непися)</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
   });
   h += '<button data-a="addLa">Добавить легендарное действие</button></div>';
-  h += '<section class="blk npc-live-preview"><h2 style="margin-top:0">Предпросмотр боевого статблока</h2><p class="note">Так этот блок будет выглядеть на вкладке «Бой».</p><div id="npcStatPreview"><p class="note">Предпросмотр появится после загрузки формы.</p></div></section>'; 
   LISTS.forEach(function(l){
     h += '<div class="fld"><label>'+l[1]+'</label><div class="chips">'+(e[l[0]]||[]).map(function(t,i){ return '<span class="tag">'+esc(t)+' <button style="all:unset;cursor:pointer;color:var(--muted)" data-a="rmTag" data-k="'+l[0]+'" data-i="'+i+'">×</button></span>'; }).join('')+'</div><input data-add="'+l[0]+'" placeholder="Впишите и нажмите Enter"></div>';
   });
+  h += '</div><aside class="npc-edit-preview"><section class="blk npc-live-preview"><h2 style="margin-top:0">Предпросмотр боевого статблока</h2><p class="note">Так этот блок будет выглядеть на вкладке «Бой».</p><div id="npcStatPreview"><p class="note">Предпросмотр появится после загрузки формы.</p></div></section></aside></div>';
   return h;
 }
 
@@ -1230,7 +1245,7 @@ function bindSheet(R){
       x.textContent = fm(m);
     });
     var pv = R.querySelector('#pvv'); if(pv){ var pp = passiveOf(ed); pv.textContent = pp==null ? '—' : pp; }
-    var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{}},ed);}catch(err){preview.innerHTML='<p class="note">Предпросмотр временно недоступен.</p>';}}
+    var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{a:{},s:{},l:{},lock:{}}},ed);}catch(err){preview.innerHTML='<p class="note">Предпросмотр временно недоступен.</p>';}}
   }
   function login(){
     fauth.signInWithEmailAndPassword($('lgE').value.trim(), $('lgP').value).catch(function(err){ $('lgM').textContent = 'Не удалось войти: '+err.message; });
@@ -1239,7 +1254,7 @@ function bindSheet(R){
     var v = el.type==='checkbox' ? el.checked : el.value;
     if(el.dataset.num) v = v==='' ? '' : +v;
     setP(el.dataset.p, v);
-    var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{}},ed);}catch(err){preview.innerHTML='<p class="note">Предпросмотр временно недоступен.</p>';}}
+    var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{a:{},s:{},l:{},lock:{}}},ed);}catch(err){preview.innerHTML='<p class="note">Предпросмотр временно недоступен.</p>';}}
     if(/^stats\./.test(el.dataset.p) || el.dataset.p==='cr') refreshMods();
     if(el.dataset.re) again();
   }
