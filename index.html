@@ -238,13 +238,18 @@ body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
 .npc-live-preview h2{font-size:18px}
 @media(max-width:1250px){.npc-edit-layout{grid-template-columns:minmax(0,1.1fr) minmax(460px,.9fr);gap:18px}.settings-stat-layout{grid-template-columns:minmax(360px,.85fr) minmax(480px,1.15fr);gap:18px}}
 @media(max-width:950px){.npcwrap:has(.npc-edit-layout),.npcwrap:has(.settings-stat-layout){padding:14px 12px 32px}.npc-edit-layout,.settings-stat-layout{grid-template-columns:minmax(0,1fr);gap:16px}.npc-edit-preview,.settings-stat-preview{position:static;max-height:none;overflow:visible;padding:0}}
-/* Preview column matches the actual combat statblock width. */
-@media(min-width:951px){
-  .npc-edit-layout{grid-template-columns:minmax(0,1fr) 370px!important;gap:26px}
-  .settings-stat-layout{grid-template-columns:minmax(0,1fr) 370px!important;gap:26px}
-  .npc-edit-preview,.settings-stat-preview{width:370px;min-width:370px;max-width:370px;box-sizing:border-box}
+/* Match the visible preview statblock to the real #stat column in the combat layout.
+   Combat main: max-width 1800px, 48px horizontal padding, two 20px gaps,
+   and grid fractions 1.1 : 1 : 1.3 (total 3.4). The preview panel itself
+   needs 34px extra for its border and horizontal padding; the statblock does not. */
+:root{--combat-stat-width:calc((min(1800px, 100vw) - 88px) / 3.4);--preview-panel-width:calc(var(--combat-stat-width) + 34px)}
+@media(min-width:1101px){
+  .npc-edit-layout{grid-template-columns:minmax(0,1fr) var(--preview-panel-width)!important;gap:26px}
+  .settings-stat-layout{grid-template-columns:minmax(0,1fr) var(--preview-panel-width)!important;gap:26px}
+  .npc-edit-preview,.settings-stat-preview{width:var(--preview-panel-width);min-width:var(--preview-panel-width);max-width:var(--preview-panel-width);box-sizing:border-box}
   .npc-edit-preview>.blk,.settings-stat-preview>.blk{width:100%;box-sizing:border-box}
-  .npc-edit-preview #npcStatPreview,.settings-stat-preview #settingsStatPreview{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+  .npc-edit-preview .npc-live-preview{width:100%;max-width:100%;box-sizing:border-box}
+  .npc-edit-preview #npcStatPreview,.settings-stat-preview #settingsStatPreview{width:var(--combat-stat-width);max-width:var(--combat-stat-width);min-width:0;box-sizing:border-box}
   .npc-edit-preview #npcStatPreview>.blk,.settings-stat-preview #settingsStatPreview>.blk{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
 }
 </style>
