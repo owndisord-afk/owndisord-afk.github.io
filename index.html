@@ -340,7 +340,7 @@ body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
 <main>
 <div class="lcol">
   <section>
-    <div class="bar" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Трекер Инициативы</h2><button id="sort">Сортировать по инициативе</button></div>
+    <div class="bar" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">Трекер Инициативы</h2></div>
     <ul id="list"></ul>
     <p class="note">Крестик убирает существо из очереди. Игрока можно вернуть кнопкой «+ Имя» под списком, а НПС удаляется насовсем.</p>
   </section>
@@ -596,15 +596,6 @@ $('list').addEventListener('click', function(e){
 function startOfTurn(id){ var c = find(id); if(c && c.used) c.used.l = {}; }
 function resetRoundTrackers(){ S.creatures.forEach(function(c){ var n = npcOf(c); if(!n || !c.used || !c.used.a) return; (n.abilities||[]).forEach(function(a,i){ if(a.tr && a.trp==='round' && !(c.used.lock && c.used.lock[i])) c.used.a[i] = 0; }); }); }
 function val(c){ return c.init===''||isNaN(+c.init) ? -Infinity : +c.init; }
-$('sort').onclick = function(){
-  var order = S.creatures.map(function(c){return c;});
-  order.sort(function(a,b){
-    if(a.active!==b.active) return a.active ? -1 : 1;
-    var d = val(b)-val(a);
-    return d===0||isNaN(d) ? order.indexOf(a)-order.indexOf(b) : d;
-  });
-  S.creatures = order; S.turn = null; S.round = 1; render();
-};
 $('startFight').onclick = function(){
   var oldOrder = S.creatures.slice();
   S.creatures.sort(function(a,b){ if(a.active!==b.active)return a.active?-1:1; var d=val(b)-val(a); return d===0||isNaN(d)?oldOrder.indexOf(a)-oldOrder.indexOf(b):d; });
@@ -906,7 +897,7 @@ function calBind(){ $('calPrevYear').onclick=function(){CAL_STATE.year=Math.max(
 function route(){
   var h = (location.hash || '#tracker').slice(1), v, want, msg = '';
   if(h==='tracker') v = 'tracker'; else if(h==='lore') v = 'lore'; else if(/^wiki-(ket|imp)$/.test(h)) v = 'wiki';
-  else if(h.indexOf('npc')===0) v = 'npc'; else if(h.indexOf('pcs')===0) v = 'pcs'; else if(h==='cities') v = 'cities'; else if(h==='articles') v = 'articles'; else if(h==='mindmap') v = 'mindmap'; else if(h==='calendar') v = 'calendar'; else if(h==='settings') v = 'settings'; else if(h==='tokens') v = 'tokens'; else v = 'tracker';
+  else if(h.indexOf('npc')===0) v = 'npc'; else if(h.indexOf('pcs')===0) v = 'pcs'; else if(h==='cities') v = 'cities'; else if(h==='articles') v = 'articles'; else if(h==='mindmap') v = 'mindmap'; else if(h==='calendar') v = 'calendar'; else if(h==='settings' || h.indexOf('settings/')===0) v = 'settings'; else if(h==='tokens') v = 'tokens'; else v = 'tracker';
   want = v;
   if(v!=='cities' && v!=='tokens' && v!=='articles'){
     if(typeof authReady==='undefined' || !authReady){ v = 'login'; msg = 'load'; }
@@ -990,6 +981,7 @@ function refreshAll(){
   var h = location.hash.slice(1);
   if(user && !ed && (h.indexOf('npc')===0 || h.indexOf('pcs')===0)) renderNpc(h.split('/'));
   if(!isGM()) renderQueue();
+  if(user && isGM() && h.indexOf('settings')===0) renderSettings();
   if(user && !editing && /^wiki-/.test(h)) renderDoc();
 }
 function seedLore(){
@@ -1049,17 +1041,31 @@ try{
 }catch(e){ fbErr = String(e); authReady = true; }
 
 var settingsConditionsDraft = null;
+function settingsPreviewHTML(n){if(!n)return '<p class="note">Создайте NPC, чтобы увидеть предпросмотр.</p>';var old=STAT_ORDER;STAT_ORDER=settingsOrderDraft.slice();var html=statHTML({id:'settings-preview',name:n.name,hp:n.hp,used:{}},n);STAT_ORDER=old;return html;}
 function renderSettings(){
   var R=$('settingsRoot');if(!R)return;if(!isGM()){R.innerHTML='<h1>Только для мастера</h1>';return;}
   if(settingsConditionsDraft===null)settingsConditionsDraft=STATE_LIST.slice();if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice();
+  var page=(location.hash.split('/')[1]||'');
+  if(!page){R.innerHTML='<h1>Настройки</h1><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px"><a class="blk" href="#settings/conditions" style="display:block;color:var(--text);text-decoration:none"><h2>Состояния</h2><p class="note">Список доступных состояний и подсказок для боя</p></a><a class="blk" href="#settings/statblock" style="display:block;color:var(--text);text-decoration:none"><h2>Шаблон статблока</h2><p class="note">Порядок блоков и предпросмотр статблока NPC</p></a></div>';return;}
   var labels={header:'Имя и портрет',hp:'ХП',ministats:'КД / БМ / П. вним. / маг. параметры',saves:'Спасброски',skills:'Навыки',actions:'Способности и атаки',legendary:'Легендарные действия',spells:'Ячейки заклинаний',defenses:'Иммунитеты / сопротивления / уязвимости'};
-  R.innerHTML='<div class="bar" style="justify-content:space-between"><h1>Настройки</h1><button class="bigY" id="saveConditions">Сохранить настройки</button></div><div class="blk"><h2 style="margin-top:0">Состояния</h2><p class="note">Список подсказок при добавлении состояний в бою. Пользовательские состояния можно вводить вручную.</p><div id="conditionSettingsList">'+settingsConditionsDraft.map(function(x,i){return '<div class="bar" style="margin:6px 0"><input data-condition-index="'+i+'" value="'+escA(x)+'" style="flex:1"><button class="small" data-remove-condition="'+i+'">×</button></div>';}).join('')+'</div><div class="bar" style="margin-top:10px"><input id="newCondition" placeholder="Новое состояние"><button id="addCondition" class="bigY">Добавить</button></div></div><div class="blk"><h2 style="margin-top:0">Порядок блоков статблока NPC</h2><p class="note">Настрой порядок отображения информации в боевом статблоке. Перемещай блоки стрелками.</p><div id="statOrderList">'+settingsOrderDraft.map(function(k,i){return '<div class="bar" style="margin:6px 0"><span style="flex:1">'+esc(labels[k]||k)+'</span><button class="small" data-order-up="'+i+'"'+(i===0?' disabled':'')+'>↑</button><button class="small" data-order-down="'+i+'"'+(i===settingsOrderDraft.length-1?' disabled':'')+'>↓</button></div>';}).join('')+'</div></div><p class="note" id="settingsMsg"></p>';
-  R.querySelectorAll('[data-condition-index]').forEach(function(inp){inp.addEventListener('input',function(){settingsConditionsDraft[+inp.dataset.conditionIndex]=inp.value;});});
-  R.querySelectorAll('[data-remove-condition]').forEach(function(btn){btn.onclick=function(){settingsConditionsDraft.splice(+btn.dataset.removeCondition,1);renderSettings();};});
-  $('addCondition').onclick=function(){var v=$('newCondition').value.trim();if(!v)return;if(settingsConditionsDraft.indexOf(v)<0)settingsConditionsDraft.push(v);renderSettings();};
-  $('newCondition').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('addCondition').click();}});
-  R.querySelectorAll('[data-order-up],[data-order-down]').forEach(function(btn){btn.onclick=function(){var i=+(btn.dataset.orderUp!=null?btn.dataset.orderUp:btn.dataset.orderDown),j=i+(btn.dataset.orderUp!=null?-1:1);if(j<0||j>=settingsOrderDraft.length)return;var x=settingsOrderDraft[i];settingsOrderDraft[i]=settingsOrderDraft[j];settingsOrderDraft[j]=x;renderSettings();};});
-  $('saveConditions').onclick=function(){var cleaned=settingsConditionsDraft.map(function(x){return String(x||'').trim();}).filter(Boolean).filter(function(x,i,a){return a.indexOf(x)===i;});STATE_LIST=cleaned;settingsConditionsDraft=cleaned.slice();STAT_ORDER=settingsOrderDraft.slice();if(!fdb){$('settingsMsg').textContent='Нет подключения к базе данных.';return;}fdb.collection('combat').doc('state').set({conditions:cleaned,statOrder:STAT_ORDER},{merge:true}).then(function(){$('settingsMsg').textContent='Настройки сохранены.';}).catch(function(err){$('settingsMsg').textContent='Не удалось сохранить: '+err.message;});};
+  if(page==='conditions'){
+    R.innerHTML='<div class="bar"><a class="btn" href="#settings">← Настройки</a><h1>Состояния</h1><spacer></spacer><button class="bigY" id="saveConditions">Сохранить</button></div><div class="blk"><p class="note">Список подсказок при добавлении состояний в бою. Пользовательские состояния можно вводить вручную.</p><div id="conditionSettingsList">'+settingsConditionsDraft.map(function(x,i){return '<div class="bar" style="margin:6px 0"><input data-condition-index="'+i+'" value="'+escA(x)+'" style="flex:1"><button class="small" data-remove-condition="'+i+'">×</button></div>';}).join('')+'</div><div class="bar" style="margin-top:10px"><input id="newCondition" placeholder="Новое состояние"><button id="addCondition" class="bigY">Добавить</button></div><p class="note" id="settingsMsg"></p></div>';
+    R.querySelectorAll('[data-condition-index]').forEach(function(inp){inp.addEventListener('input',function(){settingsConditionsDraft[+inp.dataset.conditionIndex]=inp.value;});});
+    R.querySelectorAll('[data-remove-condition]').forEach(function(btn){btn.onclick=function(){settingsConditionsDraft.splice(+btn.dataset.removeCondition,1);renderSettings();};});
+    $('addCondition').onclick=function(){var v=$('newCondition').value.trim();if(!v)return;if(settingsConditionsDraft.indexOf(v)<0)settingsConditionsDraft.push(v);renderSettings();};
+    $('newCondition').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('addCondition').click();}});
+    $('saveConditions').onclick=function(){var cleaned=settingsConditionsDraft.map(function(x){return String(x||'').trim();}).filter(Boolean).filter(function(x,i,a){return a.indexOf(x)===i;});STATE_LIST=cleaned;settingsConditionsDraft=cleaned.slice();if(!fdb){$('settingsMsg').textContent='Нет подключения к базе данных.';return;}fdb.collection('combat').doc('state').set({conditions:cleaned},{merge:true}).then(function(){$('settingsMsg').textContent='Состояния сохранены.';}).catch(function(err){$('settingsMsg').textContent='Не удалось сохранить: '+err.message;});};
+    return;
+  }
+  if(page==='statblock'){
+    var npcs=Array.isArray(NPCS)?NPCS:[], chosen=new URLSearchParams(location.hash.split('?')[1]||'').get('npc')||'', n=npcs.filter(function(x){return x.id===chosen;})[0]||npcs[0]||null;
+    R.innerHTML='<div class="bar"><a class="btn" href="#settings">← Настройки</a><h1>Шаблон статблока</h1><button class="bigY" id="saveStatOrder">Сохранить порядок</button></div><div class="blk"><label for="statPreviewNpc">Предпросмотр NPC</label><select id="statPreviewNpc" style="max-width:420px;width:100%">'+(npcs.length?npcs.map(function(x){return '<option value="'+escA(x.id)+'"'+(n&&x.id===n.id?' selected':'')+'>'+esc(x.name||'Без имени')+'</option>';}).join(''):'<option value="">Нет NPC в базе</option>')+'</select><div id="settingsStatPreview" style="margin-top:14px">'+settingsPreviewHTML(n)+'</div></div><div class="blk"><h2 style="margin-top:0">Порядок блоков</h2><p class="note">Перемещайте блоки стрелками. Этот порядок используется в бою и в предпросмотре.</p><div id="statOrderList">'+settingsOrderDraft.map(function(k,i){return '<div class="bar" style="margin:6px 0"><span style="flex:1">'+esc(labels[k]||k)+'</span><button class="small" data-order-up="'+i+'"'+(i===0?' disabled':'')+'>↑</button><button class="small" data-order-down="'+i+'"'+(i===settingsOrderDraft.length-1?' disabled':'')+'>↓</button></div>';}).join('')+'</div><p class="note" id="settingsMsg"></p></div>';
+    $('statPreviewNpc').onchange=function(){var x=npcs.filter(function(z){return z.id===this.value;},this)[0];$('settingsStatPreview').innerHTML=settingsPreviewHTML(x);};
+    R.querySelectorAll('[data-order-up],[data-order-down]').forEach(function(btn){btn.onclick=function(){var i=+(btn.dataset.orderUp!=null?btn.dataset.orderUp:btn.dataset.orderDown),j=i+(btn.dataset.orderUp!=null?-1:1);if(j<0||j>=settingsOrderDraft.length)return;var x=settingsOrderDraft[i];settingsOrderDraft[i]=settingsOrderDraft[j];settingsOrderDraft[j]=x;renderSettings();};});
+    $('saveStatOrder').onclick=function(){STAT_ORDER=settingsOrderDraft.slice();if(!fdb){$('settingsMsg').textContent='Нет подключения к базе данных.';return;}fdb.collection('combat').doc('state').set({statOrder:STAT_ORDER},{merge:true}).then(function(){$('settingsMsg').textContent='Порядок статблока сохранён.';}).catch(function(err){$('settingsMsg').textContent='Не удалось сохранить: '+err.message;});};
+    return;
+  }
+  location.hash='#settings';
 }
 
 function renderLogin(msg){
@@ -1207,6 +1213,7 @@ function formHTML(){
     h += '<div class="blk" style="background:var(--panel2)"><div class="bar" style="justify-content:space-between"><b>Действие</b><button class="small" data-a="rmLa" data-i="'+i+'">Удалить</button></div>'+F(P+'name','Название',a.name)+'<div class="fld"><label>Стоимость (очков ЛД)</label><select data-p="'+P+'cost" data-num="1">'+[1,2,3,4,5].map(function(c){ return '<option value="'+c+'"'+((+a.cost||1)===c?' selected':'')+'>'+c+'</option>'; }).join('')+'</select></div>'+'<div class="fld note-field"><label>Краткое описание (видно в статблоке)</label><textarea data-p="'+P+'note">'+esc(a.note||'')+'</textarea></div>'+'<div class="fld"><label>Полное описание (только в листе непися)</label><textarea data-p="'+P+'text">'+esc(a.text||'')+'</textarea></div></div>';
   });
   h += '<button data-a="addLa">Добавить легендарное действие</button></div>';
+  h += '<section class="blk npc-live-preview"><h2 style="margin-top:0">Предпросмотр боевого статблока</h2><p class="note">Так этот блок будет выглядеть на вкладке «Бой».</p><div id="npcStatPreview">'+statHTML({id:'npc-preview',name:e.name||'Название NPC',hp:e.hp,used:{}},e)+'</div></section>';
   LISTS.forEach(function(l){
     h += '<div class="fld"><label>'+l[1]+'</label><div class="chips">'+(e[l[0]]||[]).map(function(t,i){ return '<span class="tag">'+esc(t)+' <button style="all:unset;cursor:pointer;color:var(--muted)" data-a="rmTag" data-k="'+l[0]+'" data-i="'+i+'">×</button></span>'; }).join('')+'</div><input data-add="'+l[0]+'" placeholder="Впишите и нажмите Enter"></div>';
   });
@@ -1223,6 +1230,7 @@ function bindSheet(R){
       x.textContent = fm(m);
     });
     var pv = R.querySelector('#pvv'); if(pv){ var pp = passiveOf(ed); pv.textContent = pp==null ? '—' : pp; }
+    var preview=R.querySelector('#npcStatPreview'); if(preview) preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{}},ed);
   }
   function login(){
     fauth.signInWithEmailAndPassword($('lgE').value.trim(), $('lgP').value).catch(function(err){ $('lgM').textContent = 'Не удалось войти: '+err.message; });
@@ -1231,6 +1239,7 @@ function bindSheet(R){
     var v = el.type==='checkbox' ? el.checked : el.value;
     if(el.dataset.num) v = v==='' ? '' : +v;
     setP(el.dataset.p, v);
+    var preview=R.querySelector('#npcStatPreview'); if(preview) preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{}},ed);
     if(/^stats\./.test(el.dataset.p) || el.dataset.p==='cr') refreshMods();
     if(el.dataset.re) again();
   }
