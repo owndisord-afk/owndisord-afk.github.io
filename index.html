@@ -165,7 +165,7 @@ a.spl-a{color:var(--pc)}a.spl-a:hover{border-color:var(--pc)}
 @media(max-width:760px){.token-page{grid-template-columns:1fr;padding:12px}.token-panel,.token-preview-panel{padding:14px}}
 
 /* Modern compact hamburger navigation */
-nav.top{position:relative;display:flex;align-items:center;justify-content:space-between;padding:10px 18px;gap:12px;z-index:1000}
+nav.top{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:10px 18px;gap:12px;z-index:2000;background:var(--panel);box-shadow:0 2px 12px #0004}
 nav.top .nav-brand{display:flex;align-items:center;gap:10px;color:var(--brass);font:700 20px Georgia,serif}
 nav.top .nav-toggle{width:42px;height:42px;padding:8px;display:grid;gap:5px;align-content:center;border-radius:11px;background:var(--panel2);border:1px solid var(--line)}
 nav.top .nav-toggle span{display:block;height:2px;background:var(--text);border-radius:3px;transition:transform .2s,opacity .2s}
@@ -211,17 +211,24 @@ body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
 
 
 /* NPC editor: form on the left, live combat statblock preview on the right */
-.npc-edit-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr);gap:18px;align-items:start}
+.npc-edit-layout{display:grid;grid-template-columns:minmax(620px,1.2fr) minmax(480px,1fr);gap:22px;align-items:start;width:100%;max-width:1800px;margin:0 auto;padding:0 18px;box-sizing:border-box}
 .npc-edit-main{min-width:0}
-.npc-edit-preview{min-width:0;position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto}
+.npc-edit-preview{min-width:0;position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto}
 .npc-edit-preview .npc-live-preview{margin-top:0}
-@media(max-width:1050px){.npc-edit-layout{grid-template-columns:minmax(0,1fr)}.npc-edit-preview{position:static;max-height:none;overflow:visible}}
+@media(max-width:1180px){.npc-edit-layout{grid-template-columns:minmax(0,1fr) minmax(360px,.85fr);padding:0 12px}}@media(max-width:900px){.npc-edit-layout{grid-template-columns:minmax(0,1fr)}.npc-edit-preview{position:static;max-height:none;overflow:visible}}
 
+
+
+/* Settings statblock editor with a docked preview column */
+.settings-stat-layout{display:grid;grid-template-columns:minmax(420px,1fr) minmax(480px,.95fr);gap:22px;align-items:start;max-width:1800px;margin:0 auto;padding:0 18px;box-sizing:border-box}
+.settings-stat-controls,.settings-stat-preview{min-width:0}
+.settings-stat-preview{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto}
+.settings-stat-preview>.blk{margin-top:0}
+@media(max-width:900px){.settings-stat-layout{grid-template-columns:1fr;padding:0 10px}.settings-stat-preview{position:static;max-height:none;overflow:visible}}
 
 /* NPC sheet live statblock preview docked on the right */
-.npc-live-preview{position:fixed;right:20px;top:84px;width:min(340px,28vw);max-height:calc(100vh - 110px);overflow:auto;z-index:30;box-shadow:0 8px 28px rgba(0,0,0,.28);background:var(--panel);}
-.npc-live-preview h2{font-size:17px}
-@media(max-width:1100px){.npc-live-preview{position:static;width:auto;max-height:none;box-shadow:none;}}
+.npc-live-preview{position:static;width:100%;max-height:none;overflow:visible;z-index:auto;box-shadow:none;background:var(--panel);box-sizing:border-box}
+.npc-live-preview h2{font-size:18px}
 
 </style>
 </head>
@@ -1073,7 +1080,7 @@ function renderSettings(){
   }
   if(page==='statblock'){
     var npcs=Array.isArray(NPCS)?NPCS:[], chosen=new URLSearchParams(location.hash.split('?')[1]||'').get('npc')||'', n=npcs.filter(function(x){return x.id===chosen;})[0]||npcs[0]||null;
-    R.innerHTML='<div class="bar"><a class="btn" href="#settings">← Настройки</a><h1>Шаблон статблока</h1><button class="bigY" id="saveStatOrder">Сохранить порядок</button></div><div class="blk"><label for="statPreviewNpc">Предпросмотр NPC</label><select id="statPreviewNpc" style="max-width:420px;width:100%">'+(npcs.length?npcs.map(function(x){return '<option value="'+escA(x.id)+'"'+(n&&x.id===n.id?' selected':'')+'>'+esc(x.name||'Без имени')+'</option>';}).join(''):'<option value="">Нет NPC в базе</option>')+'</select><div id="settingsStatPreview" style="margin-top:14px">'+settingsPreviewHTML(n)+'</div></div><div class="blk"><h2 style="margin-top:0">Порядок блоков</h2><p class="note">Перемещайте блоки стрелками. Этот порядок используется в бою и в предпросмотре.</p><div id="statOrderList">'+settingsOrderDraft.map(function(k,i){return '<div class="bar" style="margin:6px 0"><span style="flex:1">'+esc(labels[k]||k)+'</span><button class="small" data-order-up="'+i+'"'+(i===0?' disabled':'')+'>↑</button><button class="small" data-order-down="'+i+'"'+(i===settingsOrderDraft.length-1?' disabled':'')+'>↓</button></div>';}).join('')+'</div><p class="note" id="settingsMsg"></p></div>';
+    R.innerHTML='<div class="bar"><a class="btn" href="#settings">← Настройки</a><h1>Шаблон статблока</h1><button class="bigY" id="saveStatOrder">Сохранить порядок</button></div><div class="settings-stat-layout"><div class="settings-stat-controls"><div class="blk"><h2 style="margin-top:0">Порядок блоков</h2><p class="note">Перемещайте блоки стрелками. Этот порядок используется в бою и в предпросмотре.</p><div id="statOrderList">'+settingsOrderDraft.map(function(k,i){return '<div class="bar" style="margin:6px 0"><span style="flex:1">'+esc(labels[k]||k)+'</span><button class="small" data-order-up="'+i+'"'+(i===0?' disabled':'')+'>↑</button><button class="small" data-order-down="'+i+'"'+(i===settingsOrderDraft.length-1?' disabled':'')+'>↓</button></div>';}).join('')+'</div><p class="note" id="settingsMsg"></p></div></div><aside class="settings-stat-preview"><div class="blk"><h2 style="margin-top:0">Предпросмотр боевого статблока</h2><label for="statPreviewNpc">Выберите NPC</label><select id="statPreviewNpc" style="max-width:100%;width:100%">'+(npcs.length?npcs.map(function(x){return '<option value="'+escA(x.id)+'"'+(n&&x.id===n.id?' selected':'')+'>'+esc(x.name||'Без имени')+'</option>';}).join(''):'<option value="">Нет NPC в базе</option>')+'</select><div id="settingsStatPreview" style="margin-top:14px">'+settingsPreviewHTML(n)+'</div></div></aside></div>';
     $('statPreviewNpc').onchange=function(){var x=npcs.filter(function(z){return z.id===this.value;},this)[0];$('settingsStatPreview').innerHTML=settingsPreviewHTML(x);};
     R.querySelectorAll('[data-order-up],[data-order-down]').forEach(function(btn){btn.onclick=function(){var i=+(btn.dataset.orderUp!=null?btn.dataset.orderUp:btn.dataset.orderDown),j=i+(btn.dataset.orderUp!=null?-1:1);if(j<0||j>=settingsOrderDraft.length)return;var x=settingsOrderDraft[i];settingsOrderDraft[i]=settingsOrderDraft[j];settingsOrderDraft[j]=x;renderSettings();};});
     $('saveStatOrder').onclick=function(){STAT_ORDER=settingsOrderDraft.slice();if(!fdb){$('settingsMsg').textContent='Нет подключения к базе данных.';return;}fdb.collection('combat').doc('state').set({statOrder:STAT_ORDER},{merge:true}).then(function(){$('settingsMsg').textContent='Порядок статблока сохранён.';}).catch(function(err){$('settingsMsg').textContent='Не удалось сохранить: '+err.message;});};
