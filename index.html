@@ -172,6 +172,18 @@ nav.top .nav-toggle span{display:block;height:2px;background:var(--text);border-
 nav.top .nav-toggle[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}nav.top .nav-toggle[aria-expanded="true"] span:nth-child(2){opacity:0}nav.top .nav-toggle[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 nav.top .nav-menu{position:absolute;top:calc(100% + 8px);left:14px;min-width:230px;display:none;flex-direction:column;gap:4px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 36px #0007}
 nav.top .nav-menu.open{display:flex}nav.top .nav-menu a[draggable="true"]{cursor:grab}nav.top .nav-menu a.nav-dragging{opacity:.45}nav.top .nav-menu a.nav-drop-target{outline:2px dashed var(--brass);outline-offset:-2px}nav.top .nav-menu a{padding:10px 12px;border-radius:9px;color:var(--text)}nav.top .nav-menu a:hover,nav.top .nav-menu a.on{background:var(--panel2);color:var(--brass)}nav.top .authbox{margin-left:auto;display:flex;align-items:center;gap:8px;max-width:55%;overflow-wrap:anywhere}
+/* Current combat mini initiative sidebar */
+#fightMiniSidebar{display:none;position:fixed;left:0;top:66px;bottom:0;width:210px;z-index:900;background:var(--panel);border-right:1px solid var(--line);padding:14px 10px;overflow:auto;box-shadow:5px 0 18px #0003}
+#fightMiniSidebar.visible{display:block}
+#fightMiniSidebar h2{font-size:17px;color:var(--brass);margin:0 0 8px}
+#fightMiniRound{font-size:12px;color:var(--muted);margin-bottom:10px}
+#fightMiniList{display:flex;flex-direction:column;gap:6px}
+#fightMiniList li{padding:7px 8px;border:1px solid var(--line);border-left:3px solid var(--pc);border-radius:7px;background:var(--panel2);font-size:13px;overflow-wrap:anywhere}
+#fightMiniList li.npc{border-left-color:var(--npc)}
+#fightMiniList li.current{border-color:var(--brass);box-shadow:0 0 0 1px var(--brass);background:#3a2d20;color:#fff}
+#fightMiniList small{display:block;color:var(--muted);font-size:11px}
+body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
+@media(max-width:760px){#fightMiniSidebar{width:150px;padding:10px 7px}body.has-mini-fight .view.on{margin-left:158px;width:calc(100% - 158px)}#fightMiniSidebar h2{font-size:15px}#fightMiniList li{font-size:12px;padding:6px}}
 .article-wrap{max-width:1100px;margin:0 auto;padding:22px 18px 60px}.article-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}.article-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px}.article-list,.article-paper{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}.article-list{align-self:start;position:sticky;top:12px}.article-list button{display:block;width:100%;text-align:left;margin:6px 0}.article-list button.active{border-color:var(--brass);color:var(--brass)}.article-paper{min-height:60vh;padding:clamp(18px,4vw,42px);background:linear-gradient(135deg,var(--panel),color-mix(in srgb,var(--panel2) 60%,var(--panel)));}.article-title-input{width:100%;font-size:26px;font-family:Georgia,serif;margin-bottom:12px}.article-editor{min-height:50vh;outline:none;line-height:1.75;font-size:17px;padding:8px 2px}.article-editor:empty:before{content:'Начните писать статью…';color:var(--muted)}.article-editor h1,.article-editor h2,.article-editor h3{font-family:Georgia,serif;color:var(--brass);margin:1.2em 0 .5em}.article-editor p{margin:.7em 0}.article-editor img{max-width:100%;height:auto;border-radius:12px;display:block;margin:16px auto}.article-editor blockquote{border-left:3px solid var(--brass);padding-left:14px;color:var(--muted)}.article-toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:var(--panel2);border-radius:10px;margin-bottom:10px}.article-toolbar button{padding:6px 10px}.article-meta{color:var(--muted);font-size:13px;margin-top:12px}.article-editor[contenteditable="false"]{cursor:default}.article-paper.readonly .article-editor{padding-top:0}
 @media(max-width:760px){.article-layout{grid-template-columns:1fr}.article-list{position:static}.article-list #articleList{display:grid;grid-template-columns:1fr 1fr;gap:6px}.article-list button{margin:0}.article-wrap{padding:14px}.article-editor{font-size:16px}}
 
@@ -209,6 +221,7 @@ nav.top .nav-menu.open{display:flex}nav.top .nav-menu a[draggable="true"]{cursor
     <a href="#articles" data-n="articles">Статьи</a><a href="#calendar" data-n="calendar">Календарь</a><a href="#mindmap" data-n="mindmap">MindMap</a><a href="#settings" data-n="settings" class="gm-only">Настройки</a><a href="#tokens" data-n="tokens">Токены</a>
   </div><span class="authbox" id="authBox"></span>
 </nav>
+<aside id="fightMiniSidebar" aria-label="Очередь инициативы текущего боя"><h2>Текущий бой</h2><div id="fightMiniRound"></div><ul id="fightMiniList"></ul></aside>
 <div class="view" id="v-lore">
   <div class="cards">
     <a class="card" href="#wiki-ket"><h2>Кет</h2><p>Кетский лор</p></a>
@@ -294,7 +307,7 @@ nav.top .nav-menu.open{display:flex}nav.top .nav-menu a[draggable="true"]{cursor
 </div>
 
 <div class="view" id="v-calendar"><div class="calendar-page">
-  <div class="calendar-head"><div><h1>Календарь мира</h1><p class="note">Имперский и кетский календари · выберите дату, чтобы увидеть соответствие и заметки</p></div><div class="calendar-year-tools"><button id="calPrevYear">←</button><strong id="calYearLabel">Год 1</strong><button id="calNextYear">→</button><button class="primary gm-only" id="calSetCurrent">Установить выбранный день текущим</button></div></div>
+  <div class="calendar-head"><div><h1>Календарь мира</h1><p class="note">Имперский и кетский календари · выберите дату, чтобы увидеть соответствие и заметки</p></div><div class="calendar-year-tools"><button id="calPrevYear">←</button><strong id="calYearLabel">Год 1</strong><button id="calNextYear">→</button><label class="gm-only cal-leap"><input type="checkbox" id="calLeapToggle"> Високосный год</label><span class="cal-year-name">Кетский год: Год Угасающей Искры</span><button class="primary gm-only" id="calSetCurrent">Установить выбранный день текущим</button></div></div>
   <div class="calendar-current" id="calCurrentBanner"></div>
   <div class="calendar-columns"><section class="calendar-panel"><div class="calendar-panel-head"><h2>Имперский календарь</h2><select id="calImperialMonth"></select></div><div class="calendar-month-sub" id="calImperialSub"></div><div class="calendar-grid imperial-grid" id="calImperialGrid"></div><div class="calendar-holidays" id="calImperialHolidays"></div></section><section class="calendar-panel"><div class="calendar-panel-head"><h2>Кетский лунный календарь</h2><select id="calKetMonth"></select></div><div class="calendar-month-sub" id="calKetSub"></div><div class="calendar-grid ket-grid" id="calKetGrid"></div><div class="calendar-holidays" id="calKetSpecial"></div></section></div>
   <section class="calendar-note-panel"><div class="calendar-selected" id="calSelectedInfo"><p class="note">Выберите день в любом календаре.</p></div><label>Заметка к выбранному дню<textarea id="calNote" rows="4" placeholder="События, встречи, праздники, игровые заметки…" disabled></textarea></label><div class="calendar-note-actions"><span id="calNoteStatus" class="note"></span><button class="primary gm-only" id="calNoteSave" disabled>Сохранить заметку</button></div></section>
@@ -320,7 +333,8 @@ nav.top .nav-menu.open{display:flex}nav.top .nav-menu a[draggable="true"]{cursor
     <span class="round">Раунд <b id="round">1</b></span>
     <button id="prev" class="small">Ход назад</button>
     <button id="next" class="bigY">Следующий ход</button>
-    <button id="newFight" title="Убрать неписей, обнулить инициативу и состояния">Новый бой</button>
+    <button id="startFight" class="primary" title="Начать бой с первого существа в очереди инициативы">Начать бой</button>
+    <button id="newFight" title="Завершить бой и сбросить очередь">Завершить бой</button>
   </div>
 </header>
 <main>
@@ -510,6 +524,7 @@ function render(){
 
 
   renderStat();
+  renderFightMini();
   save();
 }
 
@@ -589,6 +604,16 @@ $('sort').onclick = function(){
     return d===0||isNaN(d) ? order.indexOf(a)-order.indexOf(b) : d;
   });
   S.creatures = order; S.turn = null; S.round = 1; render();
+};
+$('startFight').onclick = function(){
+  var oldOrder = S.creatures.slice();
+  S.creatures.sort(function(a,b){ if(a.active!==b.active)return a.active?-1:1; var d=val(b)-val(a); return d===0||isNaN(d)?oldOrder.indexOf(a)-oldOrder.indexOf(b):d; });
+  var act = S.creatures.filter(function(c){return c.active;});
+  if(!act.length){ alert('В очереди нет участников боя.'); return; }
+  S.turn = act[0].id;
+  S.round = 1;
+  startOfTurn(S.turn);
+  render();
 };
 $('next').onclick = function(){
   var act = S.creatures.filter(function(c){return c.active;});
@@ -873,10 +898,10 @@ function calMonthOptions(sel,ket){var names=ket?CAL_KET_MONTHS.slice(0,6).concat
 function calRenderImperial(){var sel=$('calImperialMonth'),grid=$('calImperialGrid'),hol=$('calImperialHolidays');if(!sel||!grid)return;sel.innerHTML=calMonthOptions(CAL_STATE.impMonth,false);var y=CAL_STATE.year,m=CAL_STATE.impMonth,arr=calImperialYear(y).filter(function(d){return d.month===m&&d.type==='day';});$('calImperialSub').textContent=CAL_IMP_DESC[m]+' · 3 декады по 10 дней';grid.innerHTML=CAL_IMP_DAYNAMES.map(function(n){return '<div class="calendar-colhead">'+esc(n)+'</div>';}).join('')+arr.map(function(d){var classes='calendar-day'+(d.abs===CAL_STATE.selectedAbs?' selected':'')+(d.abs===CAL_STATE.currentAbs?' current':'')+(CAL_STATE.notes[calDateKey(d.abs)]?' has-note':'');return '<button class="'+classes+'" data-cal-abs="'+d.abs+'"><span class="day-num">'+d.day+'</span></button>';}).join('');hol.innerHTML=calImperialYear(y).filter(function(d){return d.type==='holiday'&&(d.month===m||(d.holiday==='День Молчания'&&m===11));}).map(function(d){return '<button class="calendar-special'+(d.abs===CAL_STATE.currentAbs?' current':'')+'" data-cal-abs="'+d.abs+'">'+esc(d.holiday)+'</button>';}).join('');}
 function calRenderKet(){var sel=$('calKetMonth'),grid=$('calKetGrid'),special=$('calKetSpecial');if(!sel||!grid)return;sel.innerHTML=calMonthOptions(CAL_STATE.ketMonth,true);var y=CAL_STATE.year,dates=calKetDates(y),m=CAL_STATE.ketMonth,monthIdx=m<6?m:(m>=8?m-2:-1);var selected=dates.filter(function(d){return (monthIdx>=0&&d.kind==='moon'&&d.month===monthIdx)||(m===6&&d.kind==='sacredMonth')||(m===7&&d.kind==='sacredMoon');});$('calKetSub').textContent=monthIdx>=0?'28 дней · без недель и названий дней':m===6?'Священный месяц · 28 дней':'Священная Луна · 1 день';grid.innerHTML=(m===7?['1']:['1','2','3','4','5','6','7']).map(function(n){return '<div class="calendar-colhead">'+n+'</div>';}).join('')+selected.map(function(d,i){var abs=calKetYearStart(y)+dates.indexOf(d),classes='calendar-day'+(abs===CAL_STATE.selectedAbs?' selected':'')+(abs===CAL_STATE.currentAbs?' current':'')+(CAL_STATE.notes[calDateKey(abs)]?' has-note':'');return '<button class="'+classes+'" data-cal-abs="'+abs+'"><span class="day-num">'+d.day+'</span><span class="day-name">'+(d.kind==='silence'?'День Молчания':'')+'</span></button>';}).join('');special.innerHTML='';}
 function calRenderInfo(){var abs=CAL_STATE.selectedAbs,el=$('calSelectedInfo');if(abs==null){el.innerHTML='<p class="note">Выберите день в любом календаре.</p>';return;}var imp=calImperialDate(abs),ket=calKetDate(abs),cur=abs===CAL_STATE.currentAbs;el.innerHTML='<h3>Выбранная дата'+(cur?' · <span class="date-highlight">Текущий день</span>':'')+'</h3><div class="cross-date"><b>Имперский:</b> '+esc(calFormatImperial(imp))+'</div><div class="cross-date"><b>Кетский:</b> '+esc(calFormatKet(ket))+'</div><div class="cross-date"><b>День декады:</b> '+(imp&&imp.type==='day'?esc(CAL_IMP_DAYNAMES[(imp.day-1)%10]):'Праздничный день')+'</div>'+(imp&&imp.type==='holiday'?'<div class="cross-date date-highlight">'+esc(imp.holiday)+'</div>':'');var note=CAL_STATE.notes[calDateKey(abs)]||'';$('calNote').value=note;$('calNote').disabled=!calGM();$('calNoteSave').disabled=!calGM();$('calNoteStatus').textContent=calGM()?'Заметки редактирует ГМ':'Заметки доступны только для чтения';}
-function calRender(){if(!CAL_STATE.loaded)return;$('calYearLabel').textContent='Имперский год '+CAL_STATE.year+(calLeap(CAL_STATE.year)?' · високосный':'');calRenderImperial();calRenderKet();calRenderInfo();$('calCurrentBanner').textContent=CAL_STATE.currentAbs==null?'Текущий день не установлен':('Текущий день: '+calFormatImperial(calImperialDate(CAL_STATE.currentAbs))+' · '+calFormatKet(calKetDate(CAL_STATE.currentAbs)));}
+function calRender(){if(!CAL_STATE.loaded)return;$('calYearLabel').textContent='Имперский год '+CAL_STATE.year+(calLeap(CAL_STATE.year)?' · високосный':'');$('calLeapToggle').checked=calLeap(CAL_STATE.year);$('calLeapToggle').disabled=!calGM();calRenderImperial();calRenderKet();calRenderInfo();$('calCurrentBanner').textContent=CAL_STATE.currentAbs==null?'Текущий день не установлен':('Текущий день: '+calFormatImperial(calImperialDate(CAL_STATE.currentAbs))+' · '+calFormatKet(calKetDate(CAL_STATE.currentAbs)));}
 function calSaveState(patch){if(!calGM()||!fdb)return;fdb.collection('calendar').doc('state').set(patch,{merge:true}).catch(function(e){$('calNoteStatus').textContent='Ошибка сохранения: '+e.message;});}
 function calInit(){if(CAL_STATE.loaded){calRender();return;}CAL_STATE.loaded=true;CAL_STATE.year=987;CAL_STATE.impMonth=6;CAL_STATE.ketMonth=5;CAL_STATE.selectedAbs=calImperialYear(987).find(function(d){return d.month===6&&d.day===21;}).abs;CAL_STATE.currentAbs=CAL_STATE.selectedAbs;calBind();calRender();if(!fdb){$('calCurrentBanner').textContent='Нет подключения к Firebase';return;}CAL_STATE.unsub=fdb.collection('calendar').doc('state').onSnapshot(function(doc){if(doc.exists){var d=doc.data()||{};if(d.notes&&typeof d.notes==='object')CAL_STATE.notes=d.notes;if(d.leapOverrides&&typeof d.leapOverrides==='object')CAL_STATE.leapOverrides=d.leapOverrides;}calRender();},function(e){$('calNoteStatus').textContent='Ошибка загрузки календаря: '+e.message;});}
-function calBind(){ $('calPrevYear').onclick=function(){CAL_STATE.year=Math.max(1,CAL_STATE.year-1);calRender();};$('calNextYear').onclick=function(){CAL_STATE.year++;calRender();};$('calImperialMonth').onchange=function(){CAL_STATE.impMonth=+this.value;calRenderImperial();};$('calKetMonth').onchange=function(){CAL_STATE.ketMonth=+this.value;calRenderKet();};$('calImperialGrid').onclick=$('calImperialHolidays').onclick=$('calKetGrid').onclick=function(e){var b=e.target.closest('[data-cal-abs]');if(b)calSelected(+b.dataset.calAbs);};$('calSetCurrent').onclick=function(){if(!calGM()||CAL_STATE.selectedAbs==null)return;CAL_STATE.currentAbs=CAL_STATE.selectedAbs;var d=calImperialDate(CAL_STATE.currentAbs);CAL_STATE.year=d.year;calSaveState({currentAbs:CAL_STATE.currentAbs,currentYear:CAL_STATE.year});calRender();};$('calNoteSave').onclick=function(){if(!calGM()||CAL_STATE.selectedAbs==null)return;CAL_STATE.notes[calDateKey(CAL_STATE.selectedAbs)]=$('calNote').value;calSaveState({notes:CAL_STATE.notes});$('calNoteStatus').textContent='Заметка сохранена';calRender();};}
+function calBind(){ $('calPrevYear').onclick=function(){CAL_STATE.year=Math.max(1,CAL_STATE.year-1);calRender();};$('calNextYear').onclick=function(){CAL_STATE.year++;calRender();};$('calImperialMonth').onchange=function(){CAL_STATE.impMonth=+this.value;calRenderImperial();};$('calKetMonth').onchange=function(){CAL_STATE.ketMonth=+this.value;calRenderKet();};$('calImperialGrid').onclick=$('calImperialHolidays').onclick=$('calKetGrid').onclick=function(e){var b=e.target.closest('[data-cal-abs]');if(b)calSelected(+b.dataset.calAbs);};$('calSetCurrent').onclick=function(){if(!calGM()||CAL_STATE.selectedAbs==null)return;CAL_STATE.currentAbs=CAL_STATE.selectedAbs;var d=calImperialDate(CAL_STATE.currentAbs);CAL_STATE.year=d.year;calSaveState({currentAbs:CAL_STATE.currentAbs,currentYear:CAL_STATE.year});calRender();};$('calLeapToggle').onchange=function(){if(!calGM())return;CAL_STATE.leapOverrides[String(CAL_STATE.year)]=this.checked;calSaveState({leapOverrides:CAL_STATE.leapOverrides});calRender();};$('calNoteSave').onclick=function(){if(!calGM()||CAL_STATE.selectedAbs==null)return;CAL_STATE.notes[calDateKey(CAL_STATE.selectedAbs)]=$('calNote').value;calSaveState({notes:CAL_STATE.notes});$('calNoteStatus').textContent='Заметка сохранена';calRender();};}
 
 function route(){
   var h = (location.hash || '#tracker').slice(1), v, want, msg = '';
@@ -901,6 +926,7 @@ function route(){
   if(v==='settings') renderSettings();
   if(v==='queue' && typeof renderQueue==='function') renderQueue();
   if(v==='login' && typeof renderLogin==='function') renderLogin(msg);
+  if(typeof renderFightMini==='function') renderFightMini();
   window.scrollTo(0,0);
 }
 var navToggle=$('navToggle'),navMenu=$('navMenu');
@@ -977,6 +1003,19 @@ function mergeTags(sn){
   if(changed){render();flushCombat().then(function(){refs.forEach(function(r){r.delete().catch(function(){});});}).catch(function(err){fbErr=err.message;});}else refs.forEach(function(r){r.delete().catch(function(){});});
 }
 
+function renderFightMini(){
+  var box=$('fightMiniSidebar'), list=$('fightMiniList'), round=$('fightMiniRound');
+  if(!box||!list||!round)return;
+  var onTracker=(location.hash||'#tracker').indexOf('#tracker')===0;
+  var data=(isGM() && typeof S!=='undefined') ? {turn:S.turn,round:S.round,creatures:S.creatures.filter(function(c){return c.active;})} : COMBAT;
+  var creatures=data&&Array.isArray(data.creatures)?data.creatures:[];
+  var active=!!(data&&data.turn&&creatures.some(function(c){return c.id===data.turn;}));
+  box.classList.toggle('visible',active&&!onTracker);
+  document.body.classList.toggle('has-mini-fight',active&&!onTracker);
+  if(!active){list.innerHTML='';round.textContent='';return;}
+  round.textContent='Раунд '+(data.round||1);
+  list.innerHTML=creatures.map(function(c){return '<li class="'+(c.pc?'':'npc')+(data.turn===c.id?' current':'')+'"><span>'+esc(c.name)+'</span><small>'+(c.pc?'Игрок':'НПС')+' · инициатива '+(c.init==null||c.init===''?'—':esc(c.init))+(data.turn===c.id?' · Сейчас ход':'')+'</small></li>';}).join('');
+}
 var pushT = null;
 function combatData(){return {conditions:STATE_LIST.slice(),statOrder:STAT_ORDER.slice(),fightId:S.fightId,round:S.round,turn:S.turn||'',creatures:S.creatures.filter(function(c){return c.active;}).map(function(c){return {id:c.id,name:c.name,pc:!!c.pc,init:(c.init===''||c.init==null)?'':+c.init,tags:c.pc?c.tags.map(function(t){return {t:t.t,note:t.note||'',dur:t.dur==null?'':t.dur,start:t.start==null?0:t.start};}):[]};})};}
 function flushCombat(){if(!fdb||!isGM())return Promise.reject(new Error('Нет прав мастера или подключения'));return fdb.collection('combat').doc('state').set(combatData(),{merge:true});}
@@ -1002,7 +1041,7 @@ try{
         if(doc.exists){ COMBAT=doc.data()||{}; if(Array.isArray(COMBAT.conditions)){ STATE_LIST=COMBAT.conditions.map(function(x){return String(x);}); if(settingsConditionsDraft===null) settingsConditionsDraft=STATE_LIST.slice(); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } if(Array.isArray(COMBAT.statOrder)){ STAT_ORDER=COMBAT.statOrder.filter(function(k){return STAT_ORDER_DEFAULT.indexOf(k)>-1;}); STAT_ORDER_DEFAULT.forEach(function(k){if(STAT_ORDER.indexOf(k)<0)STAT_ORDER.push(k);}); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } }
         else COMBAT=null;
         if(COMBAT && COMBAT.creatures) COMBAT.creatures.forEach(function(c){ if(c.name==='Амелия') c.name='Омела'; });
-        renderQueue(); if(location.hash==='#settings' && isGM()) renderSettings();
+        renderQueue(); renderFightMini(); if(location.hash==='#settings' && isGM()) renderSettings();
       });
     }
     render(); route();
