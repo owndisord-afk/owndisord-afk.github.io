@@ -217,7 +217,7 @@ body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
 .npcwrap:has(.settings-stat-layout)>.bar:first-child{position:static;top:auto;margin:0 0 38px!important;}
 /* Settings conditions page: separate the Save row from the settings card too. */
 .npcwrap:has(#saveConditions)>.bar:first-child{margin:0 0 38px!important;}
-.npc-edit-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(560px,1fr);gap:26px;align-items:start;width:100%;max-width:1900px;margin:0 auto;padding:0;box-sizing:border-box}
+.npc-edit-layout{display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:26px;align-items:start;width:100%;max-width:1900px;margin:0 auto;padding:0;box-sizing:border-box}
 .npc-edit-main,.npc-edit-preview{min-width:0}
 .npc-edit-main>.bar:first-child{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px}
 .npc-edit-main>.blk:first-of-type{margin-top:0}
@@ -227,7 +227,7 @@ body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
 .npc-edit-preview #npcStatPreview,.settings-stat-preview #settingsStatPreview{width:100%;max-width:none}
 .npc-edit-preview #npcStatPreview>.blk,.settings-stat-preview #settingsStatPreview>.blk{width:100%;max-width:none;box-sizing:border-box}
 .npc-edit-preview>.blk{margin-top:0}
-.settings-stat-layout{display:grid;grid-template-columns:minmax(440px,.9fr) minmax(600px,1.1fr);gap:26px;align-items:start;width:100%;max-width:1900px;margin:0 auto;padding:0;box-sizing:border-box}
+.settings-stat-layout{display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:26px;align-items:start;width:100%;max-width:1900px;margin:0 auto;padding:0;box-sizing:border-box}
 .settings-stat-controls,.settings-stat-preview{min-width:0}
 .settings-stat-controls>.blk{margin-top:0}
 .settings-stat-preview{position:sticky;top:76px;max-height:calc(100vh - 92px);overflow:auto;padding:0 4px 12px 0}
@@ -236,7 +236,7 @@ body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
 .settings-stat-preview #settingsStatPreview>*{max-width:none;width:100%;box-sizing:border-box}
 .npc-live-preview{position:static;width:100%;max-width:none;min-width:0;max-height:none;overflow:visible;z-index:auto;box-shadow:none;background:var(--panel);box-sizing:border-box}
 .npc-live-preview h2{font-size:18px}
-@media(max-width:1250px){.npc-edit-layout{grid-template-columns:minmax(0,1.1fr) minmax(460px,.9fr);gap:18px}.settings-stat-layout{grid-template-columns:minmax(360px,.85fr) minmax(480px,1.15fr);gap:18px}}
+@media(max-width:1250px){.npc-edit-layout,.settings-stat-layout{grid-template-columns:minmax(0,1fr) 384px;gap:18px}}
 @media(max-width:950px){.npcwrap:has(.npc-edit-layout),.npcwrap:has(.settings-stat-layout){padding:14px 12px 32px}.npc-edit-layout,.settings-stat-layout{grid-template-columns:minmax(0,1fr);gap:16px}.npc-edit-preview,.settings-stat-preview{position:static;max-height:none;overflow:visible;padding:0}}
 </style>
 </head>
