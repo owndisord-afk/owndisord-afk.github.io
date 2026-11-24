@@ -210,26 +210,27 @@ body.has-mini-fight .view.on{margin-left:220px;width:calc(100% - 220px)}
 .calendar-page{max-width:1500px;margin:0 auto;padding:18px;display:flex;flex-direction:column;gap:16px}.calendar-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}.calendar-head h1{margin:0}.calendar-year-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.calendar-year-tools strong{min-width:80px;text-align:center}.cal-year-name{font-size:13px;color:var(--muted);white-space:nowrap}.cal-leap{display:flex;align-items:center;gap:6px;font-size:13px}.calendar-current{border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:rgba(232,173,72,.12);color:var(--gold);font-weight:600}.calendar-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}.calendar-panel,.calendar-note-panel{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:14px;min-width:0}.calendar-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.calendar-panel-head h2{margin:0;font-size:20px}.calendar-panel-head select{max-width:220px}.calendar-month-sub{color:var(--muted);font-size:12px;margin:6px 0 12px}.calendar-grid{display:grid;gap:5px}.imperial-grid{grid-template-columns:repeat(10,minmax(0,1fr))}.ket-grid{grid-template-columns:repeat(7,minmax(0,1fr))}.calendar-day{min-height:46px;border:1px solid var(--line);border-radius:7px;background:var(--bg2);color:var(--text);padding:5px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;cursor:pointer;position:relative}.calendar-day:hover{border-color:var(--gold);background:rgba(232,173,72,.1)}.calendar-day .day-num{font-weight:700}.calendar-day .day-name{font-size:10px;line-height:1.15;color:var(--muted)}.calendar-day.selected{outline:2px solid #65b9ff;outline-offset:0;border-color:#65b9ff}.calendar-day.current{background:#e88b28!important;color:#21172b!important;border-color:#e88b28!important;box-shadow:0 0 0 1px #e88b28}.calendar-day.current .day-name{color:#3c2a17!important}.calendar-day.current.selected{outline:3px solid #65b9ff;outline-offset:1px}.calendar-colhead{font-size:10px;text-align:center;color:var(--muted);padding:3px 1px;line-height:1.15;font-weight:600}.calendar-day.has-note:after{content:'•';position:absolute;right:5px;top:2px;color:#62c7ff;font-size:16px}.calendar-day.holiday{background:rgba(155,99,199,.18);border-color:#9b63c7}.calendar-day.holiday.current{background:var(--gold)}.calendar-holidays{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.calendar-special{border:1px dashed #9b63c7;background:rgba(155,99,199,.12);border-radius:8px;padding:8px 10px;color:var(--text);cursor:pointer}.calendar-special.current{border:2px solid var(--gold);background:rgba(232,173,72,.15)}.calendar-note-panel{display:grid;grid-template-columns:1fr minmax(260px,1fr);gap:14px;align-items:start}.calendar-note-panel textarea{width:100%;resize:vertical;min-height:110px}.calendar-note-actions{grid-column:2;display:flex;justify-content:space-between;align-items:center;gap:10px}.calendar-selected h3{margin:0 0 8px}.calendar-selected .cross-date{margin:4px 0;padding:6px 0;border-bottom:1px solid var(--line)}.calendar-selected .cross-date:last-child{border-bottom:0}.calendar-selected .date-highlight{color:var(--gold);font-weight:700}.calendar-note-panel label{display:flex;flex-direction:column;gap:6px}.calendar-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}@media(max-width:900px){.calendar-columns{grid-template-columns:1fr}.calendar-note-panel{grid-template-columns:1fr}.calendar-note-actions{grid-column:1}.imperial-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.calendar-day{min-height:42px}.calendar-panel-head{align-items:flex-start;flex-direction:column}.calendar-panel-head select{max-width:none;width:100%}}@media(max-width:500px){.calendar-page{padding:8px}.imperial-grid,.ket-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.calendar-day{min-height:40px;padding:4px}.calendar-year-tools{width:100%}.calendar-year-tools button{flex:1}}
 
 
-/* NPC editor: form on the left, live combat statblock preview on the right */
-.npc-edit-layout{display:grid;grid-template-columns:minmax(620px,1.2fr) minmax(480px,1fr);gap:22px;align-items:start;width:100%;max-width:1800px;margin:0 auto;padding:0 18px;box-sizing:border-box}
-.npc-edit-main{min-width:0}
-.npc-edit-preview{min-width:0;position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto}
-.npc-edit-preview .npc-live-preview{margin-top:0}
-@media(max-width:1180px){.npc-edit-layout{grid-template-columns:minmax(0,1fr) minmax(360px,.85fr);padding:0 12px}}@media(max-width:900px){.npc-edit-layout{grid-template-columns:minmax(0,1fr)}.npc-edit-preview{position:static;max-height:none;overflow:visible}}
-
-
-
-/* Settings statblock editor with a docked preview column */
-.settings-stat-layout{display:grid;grid-template-columns:minmax(420px,1fr) minmax(480px,.95fr);gap:22px;align-items:start;max-width:1800px;margin:0 auto;padding:0 18px;box-sizing:border-box}
+/* Unified, full-width two-column editors: predictable gutters and balanced columns */
+.npcwrap:has(.npc-edit-layout),.npcwrap:has(.settings-stat-layout){width:100%;max-width:none;margin:0;padding:22px clamp(18px,2.2vw,40px) 48px}
+.npc-edit-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(560px,1fr);gap:26px;align-items:start;width:100%;max-width:1900px;margin:0 auto;padding:0;box-sizing:border-box}
+.npc-edit-main,.npc-edit-preview{min-width:0}
+.npc-edit-main>.bar:first-child{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 18px}
+.npc-edit-main>.blk:first-of-type{margin-top:0}
+.npc-edit-main .grid{gap:12px}
+.npc-edit-preview{position:sticky;top:76px;max-height:calc(100vh - 92px);overflow:auto;padding:0 4px 12px 0}
+.npc-edit-preview .npc-live-preview{margin:0}
+.npc-edit-preview>.blk{margin-top:0}
+.settings-stat-layout{display:grid;grid-template-columns:minmax(440px,.9fr) minmax(600px,1.1fr);gap:26px;align-items:start;width:100%;max-width:1900px;margin:0 auto;padding:0;box-sizing:border-box}
 .settings-stat-controls,.settings-stat-preview{min-width:0}
-.settings-stat-preview{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto}
-.settings-stat-preview>.blk{margin-top:0}
-@media(max-width:900px){.settings-stat-layout{grid-template-columns:1fr;padding:0 10px}.settings-stat-preview{position:static;max-height:none;overflow:visible}}
-
-/* NPC sheet live statblock preview docked on the right */
+.settings-stat-controls>.blk{margin-top:0}
+.settings-stat-preview{position:sticky;top:76px;max-height:calc(100vh - 92px);overflow:auto;padding:0 4px 12px 0}
+.settings-stat-preview>.blk{margin:0}
+.settings-stat-preview #settingsStatPreview{min-width:0}
+.settings-stat-preview #settingsStatPreview>*{max-width:100%}
 .npc-live-preview{position:static;width:100%;max-height:none;overflow:visible;z-index:auto;box-shadow:none;background:var(--panel);box-sizing:border-box}
 .npc-live-preview h2{font-size:18px}
-
+@media(max-width:1250px){.npc-edit-layout{grid-template-columns:minmax(0,1.1fr) minmax(460px,.9fr);gap:18px}.settings-stat-layout{grid-template-columns:minmax(360px,.85fr) minmax(480px,1.15fr);gap:18px}}
+@media(max-width:950px){.npcwrap:has(.npc-edit-layout),.npcwrap:has(.settings-stat-layout){padding:14px 12px 32px}.npc-edit-layout,.settings-stat-layout{grid-template-columns:minmax(0,1fr);gap:16px}.npc-edit-preview,.settings-stat-preview{position:static;max-height:none;overflow:visible;padding:0}}
 </style>
 </head>
 <body>
