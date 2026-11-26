@@ -121,11 +121,12 @@ body.guest main{grid-template-columns:1fr}
 .extra b{color:var(--text)}.extra input{width:72px;padding:4px 8px}
 .slot.used{background:var(--brass)}#stat .slot{cursor:pointer}
 .lcol{display:flex;flex-direction:column;gap:20px;min-width:0}
-.a-act{position:sticky;top:12px;align-self:start;min-width:0;height:calc(100vh - 24px);max-height:calc(100vh - 24px);overflow:hidden;padding-right:0}.a-act #stat{display:block;width:100%;height:100%;max-height:100%;min-height:0;overflow-y:scroll;overflow-x:hidden;overscroll-behavior-y:auto;scrollbar-gutter:stable;padding:0 8px 12px 0;box-sizing:border-box;scrollbar-width:auto;scrollbar-color:var(--brass) var(--panel2)}.a-act #stat::-webkit-scrollbar{width:12px;display:block}.a-act #stat::-webkit-scrollbar-track{background:var(--panel2);border-radius:8px}.a-act #stat::-webkit-scrollbar-thumb{background:var(--brass);border:2px solid var(--panel2);border-radius:8px}.a-act #stat::-webkit-scrollbar-thumb:hover{background:#f0bd70}
-.a-all{height:calc(100vh - 24px);max-height:calc(100vh - 24px);overflow:auto;overscroll-behavior:contain;position:sticky;top:12px;min-width:0}
+.a-act{position:sticky;top:12px;align-self:start;min-width:0;min-height:0;height:calc(100dvh - var(--tracker-header-height, 90px) - 36px);max-height:calc(100dvh - var(--tracker-header-height, 90px) - 36px);overflow:hidden;padding-right:0}.a-act #stat{display:block;width:100%;height:100%;max-height:100%;min-height:0;overflow-y:scroll;overflow-x:hidden;overscroll-behavior-y:auto;scrollbar-gutter:stable;padding:0 8px 12px 0;box-sizing:border-box;scrollbar-width:auto;scrollbar-color:var(--brass) var(--panel2)}.a-act #stat::-webkit-scrollbar{width:12px;display:block}.a-act #stat::-webkit-scrollbar-track{background:var(--panel2);border-radius:8px}.a-act #stat::-webkit-scrollbar-thumb{background:var(--brass);border:2px solid var(--panel2);border-radius:8px}.a-act #stat::-webkit-scrollbar-thumb:hover{background:#f0bd70}
+.a-all{height:calc(100dvh - var(--tracker-header-height, 90px) - 36px);max-height:calc(100dvh - var(--tracker-header-height, 90px) - 36px);min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:auto;position:sticky;top:12px;align-self:start;min-width:0;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:auto;scrollbar-color:var(--brass) var(--panel2)}
+.a-all::-webkit-scrollbar{width:12px}.a-all::-webkit-scrollbar-track{background:var(--panel2);border-radius:8px}.a-all::-webkit-scrollbar-thumb{background:var(--brass);border:2px solid var(--panel2);border-radius:8px}
 #stat .blk{border:2px solid var(--brass);margin:0}
 .placeholder{border:2px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);text-align:center}
-@media(max-width:1100px){main{grid-template-columns:1fr}.a-act,.a-all{position:static;height:auto;max-height:none;overflow:visible}.a-act #stat{height:auto;max-height:none;overflow:visible;padding:0;scrollbar-width:auto}}
+@media(max-width:1100px){main{grid-template-columns:1fr}.a-act,.a-all{position:static;height:auto;max-height:none;min-height:0;overflow:visible}.a-act #stat{height:auto;max-height:none;overflow:visible;padding:0;scrollbar-width:auto}}
 .big{font-size:26px;font-weight:700;text-align:center;padding:10px 8px}.fld input.big{width:100%}
 .bigstats{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
 .bigstats div{flex:1;min-width:90px;max-width:170px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
@@ -1497,5 +1498,18 @@ download.addEventListener('click',()=>{if(!img)return;const n=Number(size.value)
 })();
 </script>
 
+
+<script>
+(function(){
+  const header = document.querySelector('#v-tracker > header');
+  if (!header) return;
+  const updateHeaderHeight = () => {
+    document.documentElement.style.setProperty('--tracker-header-height', header.getBoundingClientRect().height + 'px');
+  };
+  updateHeaderHeight();
+  if ('ResizeObserver' in window) new ResizeObserver(updateHeaderHeight).observe(header);
+  window.addEventListener('resize', updateHeaderHeight, {passive:true});
+})();
+</script>
 </body>
 </html>
