@@ -121,11 +121,11 @@ body.guest main{grid-template-columns:1fr}
 .extra b{color:var(--text)}.extra input{width:72px;padding:4px 8px}
 .slot.used{background:var(--brass)}#stat .slot{cursor:pointer}
 .lcol{display:flex;flex-direction:column;gap:20px;min-width:0}
-.a-act{position:sticky;top:12px;min-width:0}
-.a-all{max-height:calc(100vh - 110px);overflow:auto;position:sticky;top:12px;min-width:0}
+.a-act{position:sticky;top:12px;min-width:0;height:calc(100vh - 24px);max-height:calc(100vh - 24px);overflow-y:auto;overscroll-behavior:contain;padding-right:8px}
+.a-all{height:calc(100vh - 24px);max-height:calc(100vh - 24px);overflow:auto;overscroll-behavior:contain;position:sticky;top:12px;min-width:0}
 #stat .blk{border:2px solid var(--brass);margin:0}
 .placeholder{border:2px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);text-align:center}
-@media(max-width:1100px){main{grid-template-columns:1fr}.a-act,.a-all{position:static;max-height:none}}
+@media(max-width:1100px){main{grid-template-columns:1fr}.a-act,.a-all{position:static;height:auto;max-height:none;overflow:visible}}
 .big{font-size:26px;font-weight:700;text-align:center;padding:10px 8px}.fld input.big{width:100%}
 .bigstats{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
 .bigstats div{flex:1;min-width:90px;max-width:170px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
@@ -432,6 +432,7 @@ var BASE = ['Ослеплён','Очарован','Оглох','Испуган',
 // ===== ПОДСКАЗКИ ДЛЯ ПОЛЯ «ЗАМЕТКА К СОСТОЯНИЮ»: правьте здесь =====
 var NOTES = ['1 мин','10 мин','до конца сл. хода','до начала сл. хода'];
 var STATE_LIST = BASE.slice();
+var STATE_DESCRIPTIONS = {};
 var STAT_ORDER_DEFAULT=['header','hp','ministats','saves','skills','actions','legendary','spells','defenses'];
 var STAT_ORDER=STAT_ORDER_DEFAULT.slice(), settingsOrderDraft=null;
 var PC_NAMES = []; // Игроки подгружаются из коллекции pcs в Firestore
@@ -489,7 +490,9 @@ function dashS(x){ return (x==null||x==='') ? '—' : esc(x); }
 function numOf(x){ var m = String(x==null?'':x).match(/-?\d+/); return m ? +m[0] : null; }
 function npcOf(c){ return (c.npcId && typeof NPCS!=='undefined' && NPCS) ? NPCS.filter(function(x){ return x.id===c.npcId; })[0] : null; }
 function pcOf(c){ return (c && c.pc && c.pcId && Array.isArray(PCS)) ? PCS.filter(function(x){ return x.id===c.pcId; })[0] : null; }
-function dexModOf(c){ var src=c&&c.pc?pcOf(c):npcOf(c); return src ? mod((src.stats||{})['лвк']) : null; }
+function statModOf(n,k){ var ov=n&&n.modOverrides&&n.modOverrides[k]; return ov!==''&&ov!=null&&!isNaN(+ov)?+ov:mod((n&&n.stats||{})[k]); }
+function initiativeModOf(n){ var ov=n&&n.initiative; return ov!==''&&ov!=null&&!isNaN(+ov)?+ov:statModOf(n,'лвк'); }
+function dexModOf(c){ var src=c&&c.pc?pcOf(c):npcOf(c); return src ? initiativeModOf(src) : null; }
 function initiativeTotal(c){ var roll=(c.init===''||c.init==null||isNaN(+c.init))?null:+c.init, dm=dexModOf(c); return roll==null?null:roll+(dm==null?0:dm); }
 function syncPlayerCharacters(){
   if(!Array.isArray(PCS)) return;
@@ -519,7 +522,7 @@ function statHTML(c,N){
   var mini='<div class="ministats"><div><span>КД</span><b>'+esc(N.ac||'—')+'</b></div><div><span>БМ</span><b>'+dashS(N.cr)+'</b></div><div><span>П. вним.</span><b>'+dashS(passiveOf(N))+'</b></div>';
   if(!N.mage&&spellInfo(N)) mini+='<div><span>СЛ закл.</span><b>'+dashS(N.dc)+'</b></div><div><span>Атака закл.</span><b>'+dashS(N.spellAtk)+'</b></div>';
   blocks.ministats=mini+'</div>';
-  var sk=skillsLine(N), sv=(N.saves||[]).map(function(k){var st=STATS.filter(function(x){return x[0]===k;})[0];return (st?st[1]:k.toUpperCase())+' '+fm(plus(mod((N.stats||{})[k]),numOf(N.cr)||0));});
+  var sk=skillsLine(N), sv=(N.saves||[]).map(function(k){var st=STATS.filter(function(x){return x[0]===k;})[0];return (st?st[1]:k.toUpperCase())+' '+fm(saveBonus(N,k));});
   blocks.saves=sv.length?'<p style="margin:8px 0 0"><b>Спасброски:</b> '+sv.join(', ')+'</p>':'';
   blocks.skills=sk?'<p style="margin:8px 0 0"><b>Навыки:</b> '+sk+'</p>':'';
   var ab='';
@@ -744,7 +747,7 @@ function setupAC(inp, ul, items, onEnter, onRemove){
     position();
   }
   function hide(){ ul.hidden = true; idx = -1; }
-  function pick(t){ inp.value = t; hide(); }
+  function pick(t){ inp.value = t; hide(); inp.dispatchEvent(new Event('change',{bubbles:true})); }
   function mark(){ Array.prototype.forEach.call(ul.children, function(li,i){ li.classList.toggle('sel', i===idx); }); }
   window.addEventListener('resize', position); window.addEventListener('scroll', position, true);
   inp.addEventListener('focus', show);
@@ -773,6 +776,7 @@ function setupAC(inp, ul, items, onEnter, onRemove){
   });
 }
 setupAC($('cond'), $('condList'), function(){ return STATE_LIST; }, function(){ $('tagNote').focus(); });
+$('cond').addEventListener('change',function(){var d=STATE_DESCRIPTIONS[$('cond').value];if(d)$('tagNote').value=d;});
 setupAC($('tagNote'), $('acList'), NOTES, function(){ $('apply').click(); });
 setupAC($('newName'), $('npcList'), function(){
   var db = (isGM() && typeof NPCS!=='undefined' && NPCS) ? NPCS.map(function(x){ return x.name; }).filter(Boolean).sort(function(a,b){ return a.localeCompare(b); }) : [];
@@ -1033,15 +1037,17 @@ function mod(v){ return (v===''||v==null||isNaN(v)) ? null : Math.floor((+v-10)/
 function plus(m,b){ return m==null ? null : m+b; }
 function fm(n){ return n==null ? '—' : (n>=0 ? '+'+n : ''+n); }
 function dash(x){ return (x==null||x==='') ? '—' : esc(x); }
-function blank(){ return {name:'',initiativeName:'',cr:'',mage:false,dc:'',spellAtk:'',showSpellInfo:false,la:'',lactions:[],spells:{},slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[],image:'',tokenImage:''}; }
+function blank(){ return {name:'',initiativeName:'',initiative:'',passiveOverride:'',modOverrides:{},saveOverrides:{},skillOverrides:{},cr:'',mage:false,dc:'',spellAtk:'',showSpellInfo:false,la:'',lactions:[],spells:{},slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[],image:'',tokenImage:''}; }
 function setP(path,val){ var k = path.split('.'), o = ed; for(var i=0;i<k.length-1;i++){ if(o[k[i]]==null) o[k[i]] = {}; o = o[k[i]]; } o[k[k.length-1]] = val; }
 function getP(path){ return path.split('.').reduce(function(o,k){ return o==null ? o : o[k]; }, ed); }
 function skillBonus(n,name){
+  var ov=n&&n.skillOverrides&&n.skillOverrides[name]; if(ov!==''&&ov!=null&&!isNaN(+ov)) return +ov;
   var s = SKILLS.filter(function(x){ return x[0]===name; })[0]; if(!s) return null;
-  var m = mod((n.stats||{})[s[1]]); if(m==null) return null;
+  var m = statModOf(n,s[1]); if(m==null) return null;
   return m + ((n.skills||[]).indexOf(name)>-1 ? (numOf(n.cr)||0) : 0);
 }
-function passiveOf(n){ var b = skillBonus(n,'Внимательность (Восприятие)'); return b==null ? null : 10+b; }
+function saveBonus(n,k){ var ov=n&&n.saveOverrides&&n.saveOverrides[k]; if(ov!==''&&ov!=null&&!isNaN(+ov)) return +ov; var m=statModOf(n,k); return m==null?null:m+(numOf(n.cr)||0); }
+function passiveOf(n){ var ov=n&&n.passiveOverride; if(ov!==''&&ov!=null&&!isNaN(+ov)) return +ov; var b = skillBonus(n,'Внимательность (Восприятие)'); return b==null ? null : 10+b; }
 function spellLinks(t){
   return String(t||'').split('\n').map(function(l){
     l = l.trim(); if(!l) return '';
@@ -1158,7 +1164,7 @@ try{
       if(gm) listen(fdb.collection('playerTags'), mergeTags);
       else if(playerPcId()) listen(fdb.collection('playerTags').where('pcId','==',playerPcId()), mergePlayerTags);
       listen(fdb.collection('combat').doc('state'), function(doc){
-        if(doc.exists){ COMBAT=doc.data()||{}; if(Array.isArray(COMBAT.conditions)){ STATE_LIST=COMBAT.conditions.map(function(x){return String(x);}); if(settingsConditionsDraft===null) settingsConditionsDraft=STATE_LIST.slice(); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } if(Array.isArray(COMBAT.statOrder)){ STAT_ORDER=COMBAT.statOrder.filter(function(k){return STAT_ORDER_DEFAULT.indexOf(k)>-1;}); STAT_ORDER_DEFAULT.forEach(function(k){if(STAT_ORDER.indexOf(k)<0)STAT_ORDER.push(k);}); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } }
+        if(doc.exists){ COMBAT=doc.data()||{}; STATE_DESCRIPTIONS=COMBAT.conditionDescriptions&&typeof COMBAT.conditionDescriptions==='object'?COMBAT.conditionDescriptions:{}; if(Array.isArray(COMBAT.conditions)){ STATE_LIST=COMBAT.conditions.map(function(x){return String(x);}); if(settingsConditionsDraft===null) settingsConditionsDraft=STATE_LIST.slice(); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } if(Array.isArray(COMBAT.statOrder)){ STAT_ORDER=COMBAT.statOrder.filter(function(k){return STAT_ORDER_DEFAULT.indexOf(k)>-1;}); STAT_ORDER_DEFAULT.forEach(function(k){if(STAT_ORDER.indexOf(k)<0)STAT_ORDER.push(k);}); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } }
         else COMBAT=null;
         if(COMBAT && COMBAT.creatures) COMBAT.creatures.forEach(function(c){ if(c.name==='Амелия') c.name='Омела'; });
         renderQueue(); renderFightMini(); if((location.hash==='#settings' || location.hash.indexOf('#settings/')===0) && isGM()) renderSettings();
@@ -1177,12 +1183,13 @@ function renderSettings(){
   if(!page){R.innerHTML='<h1>Настройки</h1><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px"><a class="blk" href="#settings/conditions" style="display:block;color:var(--text);text-decoration:none"><h2>Состояния</h2><p class="note">Список доступных состояний и подсказок для боя</p></a><a class="blk" href="#settings/statblock" style="display:block;color:var(--text);text-decoration:none"><h2>Шаблон статблока</h2><p class="note">Порядок блоков и предпросмотр статблока NPC</p></a></div>';return;}
   var labels={header:'Имя и портрет',hp:'ХП',ministats:'КД / БМ / П. вним. / маг. параметры',saves:'Спасброски',skills:'Навыки',actions:'Способности и атаки',legendary:'Легендарные действия',spells:'Ячейки заклинаний',defenses:'Иммунитеты / сопротивления / уязвимости'};
   if(page==='conditions'){
-    R.innerHTML='<div class="bar"><a class="btn" href="#settings">← Настройки</a><h1>Состояния</h1><spacer></spacer><button class="bigY" id="saveConditions">Сохранить</button></div><div class="blk"><p class="note">Список подсказок при добавлении состояний в бою. Пользовательские состояния можно вводить вручную.</p><div id="conditionSettingsList">'+settingsConditionsDraft.map(function(x,i){return '<div class="bar" style="margin:6px 0"><input data-condition-index="'+i+'" value="'+escA(x)+'" style="flex:1"><button class="small" data-remove-condition="'+i+'">×</button></div>';}).join('')+'</div><div class="bar" style="margin-top:10px"><input id="newCondition" placeholder="Новое состояние"><button id="addCondition" class="bigY">Добавить</button></div><p class="note" id="settingsMsg"></p></div>';
+    R.innerHTML='<div class="bar"><a class="btn" href="#settings">← Настройки</a><h1>Состояния</h1><spacer></spacer><button class="bigY" id="saveConditions">Сохранить</button></div><div class="blk"><p class="note">Список подсказок при добавлении состояний в бою. Пользовательские состояния можно вводить вручную.</p><div id="conditionSettingsList">'+settingsConditionsDraft.map(function(x,i){return '<div class="blk" style="margin:8px 0"><div class="bar"><input data-condition-index="'+i+'" value="'+escA(x)+'" style="flex:1"><button class="small" data-remove-condition="'+i+'">×</button></div><label>Краткое описание (автоматически подставляется в заметку)</label><textarea data-condition-desc="'+i+'" rows="2" style="min-height:48px">'+esc(STATE_DESCRIPTIONS[x]||'')+'</textarea></div>';}).join('')+'</div><div class="bar" style="margin-top:10px"><input id="newCondition" placeholder="Новое состояние"><button id="addCondition" class="bigY">Добавить</button></div><p class="note" id="settingsMsg"></p></div>';
     R.querySelectorAll('[data-condition-index]').forEach(function(inp){inp.addEventListener('input',function(){settingsConditionsDraft[+inp.dataset.conditionIndex]=inp.value;});});
+    R.querySelectorAll('[data-condition-desc]').forEach(function(inp){inp.addEventListener('input',function(){var idx=+inp.dataset.conditionDesc, name=settingsConditionsDraft[idx];STATE_DESCRIPTIONS[name]=inp.value;});});
     R.querySelectorAll('[data-remove-condition]').forEach(function(btn){btn.onclick=function(){settingsConditionsDraft.splice(+btn.dataset.removeCondition,1);renderSettings();};});
     $('addCondition').onclick=function(){var v=$('newCondition').value.trim();if(!v)return;if(settingsConditionsDraft.indexOf(v)<0)settingsConditionsDraft.push(v);renderSettings();};
     $('newCondition').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('addCondition').click();}});
-    $('saveConditions').onclick=function(){var cleaned=settingsConditionsDraft.map(function(x){return String(x||'').trim();}).filter(Boolean).filter(function(x,i,a){return a.indexOf(x)===i;});STATE_LIST=cleaned;settingsConditionsDraft=cleaned.slice();if(!fdb){$('settingsMsg').textContent='Нет подключения к базе данных.';return;}fdb.collection('combat').doc('state').set({conditions:cleaned},{merge:true}).then(function(){$('settingsMsg').textContent='Состояния сохранены.';}).catch(function(err){$('settingsMsg').textContent='Не удалось сохранить: '+err.message;});};
+    $('saveConditions').onclick=function(){var cleaned=settingsConditionsDraft.map(function(x){return String(x||'').trim();}).filter(Boolean).filter(function(x,i,a){return a.indexOf(x)===i;});STATE_LIST=cleaned;settingsConditionsDraft=cleaned.slice();var descriptions={};cleaned.forEach(function(name){descriptions[name]=String(STATE_DESCRIPTIONS[name]||'').trim();});STATE_DESCRIPTIONS=descriptions;if(!fdb){$('settingsMsg').textContent='Нет подключения к базе данных.';return;}fdb.collection('combat').doc('state').set({conditions:cleaned,conditionDescriptions:descriptions},{merge:true}).then(function(){$('settingsMsg').textContent='Состояния сохранены.';}).catch(function(err){$('settingsMsg').textContent='Не удалось сохранить: '+err.message;});};
     return;
   }
   if(page==='statblock'){
@@ -1234,6 +1241,7 @@ $('qList').addEventListener('click',function(e){
     .catch(function(err){$('qEmpty').textContent='Не удалось снять состояние: '+err.message;});
 });
 setupAC($('qCond'), $('qCondList'), function(){ return (COMBAT && COMBAT.conditions) || STATE_LIST; }, function(){ $('qNote').focus(); });
+$('qCond').addEventListener('change',function(){var d=STATE_DESCRIPTIONS[$('qCond').value];if(d)$('qNote').value=d;});
 setupAC($('qNote'), $('qNoteList'), NOTES, function(){ $('qApply').click(); });
 $('qApply').onclick = function(){
   var cid = $('qWho').value, t = $('qCond').value.trim(); if(!cid || !t || !fdb || (!isGM() && cid!=='pc-'+playerPcId())) return;
@@ -1289,10 +1297,10 @@ function sheetHTML(n){
   h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#'+HK+'">К списку</a>'+(canAccessPc(n.id)?'<a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a>':'')+'</div></div>';
   if(n.tokenImage||n.image) h += '<img class="npc-sheet-image" src="'+escA(n.tokenImage||n.image)+'" alt="'+escA(n.name)+'">';
   h += '<div class="bigstats"><div><span>БМ</span><b>'+dash(n.cr)+'</b></div><div><span>КД</span><b>'+dash(n.ac)+'</b></div><div><span>П. вним.</span><b>'+dash(passiveOf(n))+'</b></div><div><span>ХП</span><b>'+dash(n.hp)+'</b></div></div>';
-  h += '<table class="st"><tr><td></td>'+STATS.map(function(s){ return '<td><b>'+s[1]+'</b></td>'; }).join('')+'</tr><tr><td>Знач.</td>'+STATS.map(function(s){ return '<td>'+dash(st[s[0]])+'</td>'; }).join('')+'</tr><tr><td>Мод.</td>'+STATS.map(function(s){ return '<td>'+fm(mod(st[s[0]]))+'</td>'; }).join('')+'</tr></table>';
-  var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return (s?s[1]:k.toUpperCase())+' '+fm(plus(mod(st[k]),pb)); });
+  h += '<table class="st"><tr><td></td>'+STATS.map(function(s){ return '<td><b>'+s[1]+'</b></td>'; }).join('')+'</tr><tr><td>Знач.</td>'+STATS.map(function(s){ return '<td>'+dash(st[s[0]])+'</td>'; }).join('')+'</tr><tr><td>Мод.</td>'+STATS.map(function(s){ return '<td>'+fm(statModOf(n,s[0]))+'</td>'; }).join('')+'</tr></table>';
+  var sv = (n.saves||[]).map(function(k){ var s = STATS.filter(function(x){ return x[0]===k; })[0]; return (s?s[1]:k.toUpperCase())+' '+fm(saveBonus(n,k)); });
   if(sv.length) h += '<p><b>Спасброски:</b> '+sv.join(', ')+'</p>';
-  var sk = (n.skills||[]).map(function(nm){ var s = SKILLS.filter(function(x){ return x[0]===nm; })[0]; return s ? esc(nm)+' '+fm(plus(mod(st[s[1]]),pb)) : ''; }).filter(Boolean);
+  var sk = (n.skills||[]).map(function(nm){ var s = SKILLS.filter(function(x){ return x[0]===nm; })[0]; return s ? esc(nm)+' '+fm(skillBonus(n,nm)) : ''; }).filter(Boolean);
   if(sk.length) h += '<p><b>Навыки:</b> '+sk.join(', ')+'</p>';
   LISTS.forEach(function(l){ if((n[l[0]]||[]).length) h += '<p><b>'+l[1]+':</b> '+n[l[0]].map(esc).join(', ')+'</p>'; });
   if(n.mage){
@@ -1316,7 +1324,7 @@ function sheetHTML(n){
 
 function F(path,label,val,cls){ return '<div class="fld"><label>'+label+'</label><input'+(cls?' class="'+cls+'"':'')+' data-p="'+path+'" value="'+escA(val==null?'':val)+'"></div>'; }
 function chip(path,v,label,on){ return '<button type="button" class="chip'+(on?' on':'')+'" data-tg="'+path+'" data-v="'+escA(v)+'">'+label+'</button>'; }
-function mspan(k,on){ var m = mod((ed.stats||{})[k]); if(on && m!=null) m += (numOf(ed.cr)||0); return '<span data-mod="'+k+'">'+fm(m)+'</span>'; }
+function mspan(k,on){ var m = statModOf(ed,k); if(on && m!=null) m += (numOf(ed.cr)||0); return '<span data-mod="'+k+'">'+fm(m)+'</span>'; }
 function imageFileToData(file,maxDim,quality){
   return new Promise(function(resolve,reject){
     if(!file||!file.type||!file.type.startsWith('image/')){reject(new Error('Файл не является изображением'));return;}
@@ -1328,7 +1336,7 @@ function imageFileToData(file,maxDim,quality){
 function formHTML(){
   var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?(HK==='pcs'?'Редактирование персонажа':'Редактирование NPC'):(HK==='pcs'?'Новый персонаж':'Новый NPC'))+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId&&isGM()?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
   h += '<div class="npc-edit-layout"><div class="npc-edit-main">';
-  h += '<div class="blk"><b>'+(HK==='pcs'?'Изображение персонажа':'Изображение NPC')+'</b><div class="fld"><label>Загрузить PNG / JPEG</label><input type="file" accept="image/png,image/jpeg,image/webp" data-image-upload="npc"><p class="note">Изображение автоматически уменьшится для хранения. '+((e.image||e.tokenImage)?'<img class="npc-sheet-image" src="'+escA(e.tokenImage||e.image)+'" alt="">':'')+'</p><button type="button" class="small" data-a="clearImage">Удалить изображение</button></div></div>' + F('name','Имя',e.name)+(HK==='pcs'?F('initiativeName','Имя в инициативе',e.initiativeName||e.name):'')+'<div class="grid" style="grid-template-columns:repeat(4,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+'<div class="fld"><label>П. вним.</label><div class="big pvbox" id="pvv">'+(passiveOf(e)==null?'—':passiveOf(e))+'</div></div>'+F('hp','max ХП',e.hp,'big')+'</div>';
+  h += '<div class="blk"><b>'+(HK==='pcs'?'Изображение персонажа':'Изображение NPC')+'</b><div class="fld"><label>Загрузить PNG / JPEG</label><input type="file" accept="image/png,image/jpeg,image/webp" data-image-upload="npc"><p class="note">Изображение автоматически уменьшится для хранения. '+((e.image||e.tokenImage)?'<img class="npc-sheet-image" src="'+escA(e.tokenImage||e.image)+'" alt="">':'')+'</p><button type="button" class="small" data-a="clearImage">Удалить изображение</button></div></div>' + F('name','Имя',e.name)+(HK==='pcs'?F('initiativeName','Имя в инициативе',e.initiativeName||e.name):'')+'<div class="grid" style="grid-template-columns:repeat(4,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+F('passiveOverride','Пассивная внимательность',passiveOf(e),'big')+F('initiative','Инициатива (модификатор)',initiativeModOf(e),'big')+F('hp','max ХП',e.hp,'big')+'</div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="mage" data-re="1" style="width:auto"'+(e.mage?' checked':'')+'> Маг</label></div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="showSpellInfo" style="width:auto"'+(e.showSpellInfo?' checked':'')+'> Показывать СЛ спасброска и модификатор атаки заклинанием в статблоке</label></div>';
   if(!e.mage){ h += F('dc','СЛ спасброска от заклинаний',e.dc)+F('spellAtk','Мод. атаки закл.',e.spellAtk); }
@@ -1340,9 +1348,9 @@ function formHTML(){
     for(var l2=1;l2<=9;l2++){ if(((e.slots||{})[l2]||0)>0) h += '<div class="fld"><label>Заклинания '+l2+' уровня (по строке: Название | ссылка)</label><textarea rows="2" style="min-height:56px" data-p="spells.'+l2+'">'+esc((e.spells||{})[l2]||'')+'</textarea></div>'; }
     h += '</div>';
   }
-  h += '<div class="blk"><b>Характеристики</b><table class="st"><tr><td></td><td>Значение</td><td>Модификатор</td></tr>'+STATS.map(function(s){ return '<tr><td>'+s[1]+'</td><td><input data-p="stats.'+s[0]+'" data-num="1" style="width:80px" value="'+escA((e.stats||{})[s[0]]==null?'':e.stats[s[0]])+'"></td><td>'+mspan(s[0])+'</td></tr>'; }).join('')+'</table></div>';
-  h += '<div class="fld"><label>Спасброски</label><div class="chips">'+STATS.map(function(s){ return chip('saves',s[0],s[1]+' '+mspan(s[0],(e.saves||[]).indexOf(s[0])>-1),(e.saves||[]).indexOf(s[0])>-1); }).join('')+'</div></div>';
-  h += '<div class="fld"><label>Владение навыками</label><div class="chips">'+SKILLS.map(function(s){ return chip('skills',s[0],esc(s[0])+' '+mspan(s[1],(e.skills||[]).indexOf(s[0])>-1),(e.skills||[]).indexOf(s[0])>-1); }).join('')+'</div></div>';
+  h += '<div class="blk"><b>Характеристики</b><table class="st"><tr><td></td><td>Значение</td><td>Модификатор</td></tr>'+STATS.map(function(s){ return '<tr><td>'+s[1]+'</td><td><input data-p="stats.'+s[0]+'" data-num="1" style="width:80px" value="'+escA((e.stats||{})[s[0]]==null?'':e.stats[s[0]])+'"></td><td>'+'<input data-p="modOverrides.'+s[0]+'" data-num="1" style="width:76px" value="'+escA(statModOf(e,s[0])==null?'':statModOf(e,s[0]))+'">'+'</td></tr>'; }).join('')+'</table></div>';
+  h += '<div class="fld"><label>Спасброски</label><div class="chips">'+STATS.map(function(s){ return chip('saves',s[0],s[1],(e.saves||[]).indexOf(s[0])>-1); }).join('')+'</div><div class="grid">'+(e.saves||[]).map(function(k){var st=STATS.filter(function(x){return x[0]===k;})[0];return '<div class="fld"><label>'+(st?st[1]:k)+' — итоговый бонус</label><input data-p="saveOverrides.'+k+'" data-num="1" value="'+escA(saveBonus(e,k)==null?'':saveBonus(e,k))+'"></div>';}).join('')+'</div></div>';
+  h += '<div class="fld"><label>Владение навыками</label><div class="chips">'+SKILLS.map(function(s){ return chip('skills',s[0],esc(s[0]),(e.skills||[]).indexOf(s[0])>-1); }).join('')+'</div><div class="grid">'+(e.skills||[]).map(function(nm){return '<div class="fld"><label>'+esc(nm)+' — итоговый бонус</label><input data-p="skillOverrides.'+escA(nm)+'" data-num="1" value="'+escA(skillBonus(e,nm)==null?'':skillBonus(e,nm))+'"></div>';}).join('')+'</div></div>';
   h += '<div class="fld"><label>Описание</label><textarea data-p="desc">'+esc(e.desc||'')+'</textarea></div>';
   e.abilities.forEach(function(a,i){
     var P = 'abilities.'+i+'.';
@@ -1374,11 +1382,15 @@ function bindSheet(R){
   function refreshMods(){
     var pb = numOf(ed.cr)||0;
     Array.prototype.forEach.call(R.querySelectorAll('[data-mod]'), function(x){
-      var m = mod((ed.stats||{})[x.dataset.mod]), c = x.closest('.chip');
+      var m = statModOf(ed,x.dataset.mod), c = x.closest('.chip');
       if(c && c.classList.contains('on') && m!=null) m += pb;
       x.textContent = fm(m);
     });
     var pv = R.querySelector('#pvv'); if(pv){ var pp = passiveOf(ed); pv.textContent = pp==null ? '—' : pp; }
+    Array.prototype.forEach.call(R.querySelectorAll('[data-p="passiveOverride"]'),function(x){if(ed.passiveOverride===''||ed.passiveOverride==null)x.value=passiveOf(ed)==null?'':passiveOf(ed);});
+    Array.prototype.forEach.call(R.querySelectorAll('[data-p="initiative"]'),function(x){if(ed.initiative===''||ed.initiative==null)x.value=initiativeModOf(ed)==null?'':initiativeModOf(ed);});
+    Array.prototype.forEach.call(R.querySelectorAll('[data-p^="saveOverrides."]'),function(x){var k=x.dataset.p.split('.')[1];if(!ed.saveOverrides||ed.saveOverrides[k]===''||ed.saveOverrides[k]==null)x.value=saveBonus(ed,k)==null?'':saveBonus(ed,k);});
+    Array.prototype.forEach.call(R.querySelectorAll('[data-p^="skillOverrides."]'),function(x){var k=x.dataset.p.slice('skillOverrides.'.length);if(!ed.skillOverrides||ed.skillOverrides[k]===''||ed.skillOverrides[k]==null)x.value=skillBonus(ed,k)==null?'':skillBonus(ed,k);});
     var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{a:{},s:{},l:{},lock:{}}},ed);}catch(err){preview.innerHTML='<p class="note">Предпросмотр временно недоступен.</p>';}}
   }
   function login(){
@@ -1389,7 +1401,7 @@ function bindSheet(R){
     if(el.dataset.num) v = v==='' ? '' : +v;
     setP(el.dataset.p, v);
     var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{a:{},s:{},l:{},lock:{}}},ed);}catch(err){preview.innerHTML='<p class="note">Предпросмотр временно недоступен.</p>';}}
-    if(/^stats\./.test(el.dataset.p) || el.dataset.p==='cr') refreshMods();
+    if(/^stats\./.test(el.dataset.p) || /^modOverrides\./.test(el.dataset.p) || el.dataset.p==='cr') refreshMods();
     if(el.dataset.re) again();
   }
   R.addEventListener('input', function(e){
@@ -1409,7 +1421,7 @@ function bindSheet(R){
       var arr = getP(b.dataset.tg); if(!arr){ setP(b.dataset.tg, []); arr = getP(b.dataset.tg); }
       var v = /^[0-9]+$/.test(b.dataset.v) ? +b.dataset.v : b.dataset.v, i = arr.indexOf(v);
       if(i>-1) arr.splice(i,1); else arr.push(v);
-      b.classList.toggle('on'); refreshMods(); return;
+      b.classList.toggle('on'); again(); return;
     }
     var a = b.dataset.a, i = +b.dataset.i;
     if(b.dataset.moveAb!=null){i=+b.dataset.moveAb;var j=i+(+b.dataset.dir);if(j>=0&&j<ed.abilities.length){var z=ed.abilities[i];ed.abilities[i]=ed.abilities[j];ed.abilities[j]=z;again();}return;}
