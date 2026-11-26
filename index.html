@@ -30,7 +30,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .round{color:var(--muted)}
 .round b{color:var(--text);font-size:18px}
 ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.row{display:grid;grid-template-columns:minmax(90px,1fr) 72px;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-left:5px solid var(--pc);border-radius:8px;padding:9px 11px}
+.row{display:grid;grid-template-columns:minmax(90px,1fr) 96px;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-left:5px solid var(--pc);border-radius:8px;padding:9px 11px}
 .row.npc{border-left-color:var(--npc)}
 .row.off{opacity:.45}
 .row.current{border-color:var(--brass);border-left-color:var(--brass);box-shadow:0 0 0 1px var(--brass)}
@@ -38,7 +38,7 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px
 .row.tie.current{border-color:#e58a36;border-left-color:#e58a36;box-shadow:0 0 0 1px #e58a36}
 .name{font-weight:600;overflow-wrap:anywhere}
 .name small{color:var(--muted);font-weight:400;margin-left:6px}
-.init{width:72px;text-align:center;font-size:18px;font-weight:700}
+.init{width:100%;box-sizing:border-box;text-align:center;font-size:18px;font-weight:700}.init-wrap{display:flex;flex-direction:column;gap:2px;min-width:0}.init-total{font-size:10px;color:var(--muted);text-align:center;white-space:nowrap}
 .absent{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:1200px;margin:0 auto;padding:4px 24px 28px;color:var(--muted);font-size:13px}
 .absent:empty{display:none}
 .absent button{font-size:13px;padding:3px 9px;color:var(--muted);background:transparent}
@@ -432,18 +432,20 @@ var NOTES = ['1 мин','10 мин','до конца сл. хода','до на�
 var STATE_LIST = BASE.slice();
 var STAT_ORDER_DEFAULT=['header','hp','ministats','saves','skills','actions','legendary','spells','defenses'];
 var STAT_ORDER=STAT_ORDER_DEFAULT.slice(), settingsOrderDraft=null;
-var PC_NAMES = ['Ииска','Дариан','Омела','Фил','Драуг'];
+var PC_NAMES = []; // Игроки подгружаются из коллекции pcs в Firestore
 function newFightId(){ return 'fight-'+Date.now()+'-'+Math.random().toString(36).slice(2,9); }
 
 function fresh(){
   return {
-    creatures: PC_NAMES.map(function(n,i){return {id:'pc'+i,name:n,pc:true,init:'',active:true,tags:[]};}),
+    creatures: [],
     custom: [], npcs: {}, turn: null, round: 1, seq: 0, fightId:newFightId()
   };
 }
 function load(){
   try{ var s = localStorage.getItem(KEY); if(s){ var d = JSON.parse(s); if(d && d.creatures){
       d.creatures.forEach(function(c){ c.tags = (c.tags||[]).map(function(t){ return typeof t==='string' ? {t:t,note:''} : t; }); if(c.name==='Амелия') c.name='Омела'; });
+      // Старые заранее зашитые имена игроков больше не участвуют в инициативе.
+      d.creatures = d.creatures.filter(function(c){ return !c.pc || !!c.pcId; });
       if(!d.npcs) d.npcs = {};
       return d;
     } } }catch(e){}
@@ -474,6 +476,21 @@ function isGM(){ return typeof user!=='undefined' && !!user && GM_UIDS.indexOf(u
 function dashS(x){ return (x==null||x==='') ? '—' : esc(x); }
 function numOf(x){ var m = String(x==null?'':x).match(/-?\d+/); return m ? +m[0] : null; }
 function npcOf(c){ return (c.npcId && typeof NPCS!=='undefined' && NPCS) ? NPCS.filter(function(x){ return x.id===c.npcId; })[0] : null; }
+function pcOf(c){ return (c && c.pc && c.pcId && Array.isArray(PCS)) ? PCS.filter(function(x){ return x.id===c.pcId; })[0] : null; }
+function dexModOf(c){ var src=c&&c.pc?pcOf(c):npcOf(c); return src ? mod((src.stats||{})['лвк']) : null; }
+function initiativeTotal(c){ var roll=(c.init===''||c.init==null||isNaN(+c.init))?null:+c.init, dm=dexModOf(c); return roll==null?null:roll+(dm==null?0:dm); }
+function syncPlayerCharacters(){
+  if(!Array.isArray(PCS)) return;
+  var old=S.creatures.filter(function(c){return c.pc;}), byId={};
+  old.forEach(function(c){var id=c.pcId||String(c.id||'').replace(/^pc-/,'');byId[id]=c;});
+  var next=PCS.map(function(person){
+    var id=person.id, c=byId[id], display=String(person.initiativeName||person.name||'Без имени').trim()||'Без имени';
+    if(c){c.pc=true;c.pcId=id;c.id='pc-'+id;c.name=display;c.dexMod=mod((person.stats||{})['лвк']);return c;}
+    return {id:'pc-'+id,pc:true,pcId:id,name:display,init:'',active:true,tags:[],dexMod:mod((person.stats||{})['лвк'])};
+  });
+  S.creatures=S.creatures.filter(function(c){return !c.pc;});
+  S.creatures=next.concat(S.creatures);
+}
 function extraHTML(c){
   var N = isGM() ? npcOf(c) : null; if(!N) return '';
   var mx = numOf(N.hp);
@@ -544,15 +561,15 @@ function render(){
   document.body.classList.toggle('guest', !isGM());
   var present = S.creatures.filter(function(c){return c.active;});
   var initCounts = {};
-  present.forEach(function(c){ if(c.init!=='' && c.init!=null && !isNaN(+c.init)){ var k=String(+c.init); initCounts[k]=(initCounts[k]||0)+1; } });
+  present.forEach(function(c){ var v=initiativeTotal(c); if(v!=null){ var k=String(v); initCounts[k]=(initCounts[k]||0)+1; } });
   var tiedIds = {};
-  present.forEach(function(c){ if(c.init!=='' && c.init!=null && !isNaN(+c.init) && initCounts[String(+c.init)]>1) tiedIds[c.id]=true; });
+  present.forEach(function(c){ var v=initiativeTotal(c); if(v!=null && initCounts[String(v)]>1) tiedIds[c.id]=true; });
   var html = present.map(function(c){
     var cls = 'row' + (c.pc?'':' npc') + (S.turn===c.id?' current':'') + (tiedIds[c.id]?' tie':'');
     return '<li class="'+cls+'" data-id="'+c.id+'">'+
       '<span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small> '+
         '<button class="del" data-act="del" title="'+(c.pc?'Убрать из боя (нет на игре)':'Удалить')+'" aria-label="Убрать">×</button></span>'+
-      '<input class="init" type="number" data-act="init" value="'+esc(String(c.init))+'" placeholder="—" aria-label="Инициатива">'+
+      '<div class="init-wrap"><input class="init" type="number" data-act="init" value="'+esc(String(c.init))+'" placeholder="Бросок" aria-label="Бросок инициативы"><small class="init-total">'+(initiativeTotal(c)==null?'':(fm(dexModOf(c)==null?0:dexModOf(c))+' = '+initiativeTotal(c)))+'</small></div>'+
       '<div class="tags">'+c.tags.map(function(t,i){ return tagHTML(t,i); }).join('')+'</div>'+extraHTML(c)+
     '</li>';
   }).join('');
@@ -579,7 +596,7 @@ function setHp(c,v,src){
 }
 function onTrkInput(e){
   var t = e.target, act = t.dataset.act;
-  if(act==='init'){ var li = t.closest('li'); if(li){ find(li.dataset.id).init = t.value; save(); } }
+  if(act==='init'){ var li = t.closest('li'); if(li){ var c=find(li.dataset.id); c.init = t.value; var dm=dexModOf(c); var total=initiativeTotal(c); var out=li.querySelector('.init-total'); if(out) out.textContent=total==null?'':(fm(dm==null?0:dm)+' = '+total); save(); } }
   else if(act==='hp'){ var c = find(t.dataset.hpid); if(c) setHp(c, t.value==='' ? '' : +t.value, t); }
 }
 function onTrkKey(e){
@@ -638,7 +655,7 @@ $('list').addEventListener('click', function(e){
 
 function startOfTurn(id){ var c = find(id); if(c && c.used) c.used.l = {}; }
 function resetRoundTrackers(){ S.creatures.forEach(function(c){ var n = npcOf(c); if(!n || !c.used || !c.used.a) return; (n.abilities||[]).forEach(function(a,i){ if(a.tr && a.trp==='round' && !(c.used.lock && c.used.lock[i])) c.used.a[i] = 0; }); }); }
-function val(c){ return c.init===''||isNaN(+c.init) ? -Infinity : +c.init; }
+function val(c){ var n=initiativeTotal(c); return n==null ? -Infinity : n; }
 $('startFight').onclick = function(){
   var oldOrder = S.creatures.slice();
   S.creatures.sort(function(a,b){ if(a.active!==b.active)return a.active?-1:1; var d=val(b)-val(a); return d===0||isNaN(d)?oldOrder.indexOf(a)-oldOrder.indexOf(b):d; });
@@ -670,7 +687,7 @@ $('prev').onclick = function(){
 $('newFight').onclick = function(){
   if(!confirm('Сбросить всё? Неписи, инициатива, состояния и раунд вернутся к начальному виду, все игроки вернутся в бой. Запомненные имена для подсказок сохранятся.')) return;
   var keepNames = S.npcs;
-  S = fresh(); S.npcs = keepNames || {};
+  S = fresh(); S.npcs = keepNames || {}; syncPlayerCharacters();
   $('cond').value = ''; $('tagNote').value = ''; $('dur').value = 'inf'; $('newName').value = '';
   render();
 };
@@ -998,7 +1015,7 @@ function mod(v){ return (v===''||v==null||isNaN(v)) ? null : Math.floor((+v-10)/
 function plus(m,b){ return m==null ? null : m+b; }
 function fm(n){ return n==null ? '—' : (n>=0 ? '+'+n : ''+n); }
 function dash(x){ return (x==null||x==='') ? '—' : esc(x); }
-function blank(){ return {name:'',cr:'',mage:false,dc:'',spellAtk:'',showSpellInfo:false,la:'',lactions:[],spells:{},slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[],image:'',tokenImage:''}; }
+function blank(){ return {name:'',initiativeName:'',cr:'',mage:false,dc:'',spellAtk:'',showSpellInfo:false,la:'',lactions:[],spells:{},slots:{},stats:{},saves:[],ac:'',hp:'',desc:'',abilities:[],skills:[],attacks:[],imm:[],res:[],vul:[],lang:[],image:'',tokenImage:''}; }
 function setP(path,val){ var k = path.split('.'), o = ed; for(var i=0;i<k.length-1;i++){ if(o[k[i]]==null) o[k[i]] = {}; o = o[k[i]]; } o[k[k.length-1]] = val; }
 function getP(path){ return path.split('.').reduce(function(o,k){ return o==null ? o : o[k]; }, ed); }
 function skillBonus(n,name){
@@ -1019,6 +1036,7 @@ function skillsLine(n){ return (n.skills||[]).map(function(nm){ var b = skillBon
 function docs(sn){ return sn.docs.map(function(d){ var o = d.data(); o.id = d.id; return o; }); }
 function listen(q,cb){ unsubs.push(q.onSnapshot(cb, function(err){ fbErr = err.message; route(); })); }
 function refreshAll(){
+  syncPlayerCharacters();
   if(window.refreshTokenNpcSelect) window.refreshTokenNpcSelect();
   render();
   var h = location.hash.slice(1);
@@ -1049,10 +1067,10 @@ function renderFightMini(){
   document.body.classList.toggle('has-mini-fight',active&&!onTracker);
   if(!active){list.innerHTML='';round.textContent='';return;}
   round.textContent='Раунд '+(data.round||1);
-  list.innerHTML=creatures.map(function(c){return '<li class="'+(c.pc?'':'npc')+(data.turn===c.id?' current':'')+'"><span>'+esc(c.name)+'</span><small>'+(c.pc?'Игрок':'НПС')+' · инициатива '+(c.init==null||c.init===''?'—':esc(c.init))+(data.turn===c.id?' · Сейчас ход':'')+'</small></li>';}).join('');
+  list.innerHTML=creatures.map(function(c){return '<li class="'+(c.pc?'':'npc')+(data.turn===c.id?' current':'')+'"><span>'+esc(c.name)+'</span><small>'+(c.pc?'Игрок':'НПС')+' · инициатива '+(initiativeTotal(c)==null?'—':esc(initiativeTotal(c)))+(data.turn===c.id?' · Сейчас ход':'')+'</small></li>';}).join('');
 }
 var pushT = null;
-function combatData(){return {conditions:STATE_LIST.slice(),statOrder:STAT_ORDER.slice(),fightId:S.fightId,round:S.round,turn:S.turn||'',creatures:S.creatures.filter(function(c){return c.active;}).map(function(c){return {id:c.id,name:c.name,pc:!!c.pc,init:(c.init===''||c.init==null)?'':+c.init,tags:c.pc?c.tags.map(function(t){return {t:t.t,note:t.note||'',dur:t.dur==null?'':t.dur,start:t.start==null?0:t.start};}):[]};})};}
+function combatData(){return {conditions:STATE_LIST.slice(),statOrder:STAT_ORDER.slice(),fightId:S.fightId,round:S.round,turn:S.turn||'',creatures:S.creatures.filter(function(c){return c.active;}).map(function(c){return {id:c.id,name:c.name,pc:!!c.pc,init:(initiativeTotal(c)==null?'':initiativeTotal(c)),initRoll:(c.init===''||c.init==null)?'':+c.init,initMod:(dexModOf(c)==null?0:dexModOf(c)),tags:c.pc?c.tags.map(function(t){return {t:t.t,note:t.note||'',dur:t.dur==null?'':t.dur,start:t.start==null?0:t.start};}):[]};})};}
 function flushCombat(){if(!fdb||!isGM())return Promise.reject(new Error('Нет прав мастера или подключения'));return fdb.collection('combat').doc('state').set(combatData(),{merge:true});}
 function pushCombat(){if(!fdb||!isGM())return;clearTimeout(pushT);pushT=setTimeout(function(){flushCombat().catch(function(){});},600);}
 
@@ -1164,7 +1182,7 @@ function renderNpc(parts){
   if(p[1]==='new'){ if(!ed){ ed = blank(); edId = null; } R.innerHTML = formHTML(); return; }
   var n = D.filter(function(x){ return x.id===p[1]; })[0];
   if(!n){ R.innerHTML = '<p class="note">Не найдено. <a href="#'+HK+'" style="color:var(--pc)">К списку</a></p>'; return; }
-  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = Object.assign(blank(), JSON.parse(JSON.stringify(n))); ed.abilities=(ed.abilities||[]).map(function(a){return Object.assign({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''},a);}); ed.attacks=(ed.attacks||[]).map(function(a){return Object.assign({name:'',hit:'',note:'',text:'',action:''},a);}); ed.lactions=(ed.lactions||[]).map(function(a){return Object.assign({name:'',cost:1,note:'',text:''},a);}); edId = n.id; } R.innerHTML = formHTML(); var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{a:{},s:{},l:{},lock:{}}},ed);}catch(err){preview.innerHTML='<p class="note">Не удалось построить предпросмотр: '+esc(err.message||err)+'</p>';}} }
+  if(p[2]==='edit'){ if(!ed || edId!==n.id){ ed = Object.assign(blank(), JSON.parse(JSON.stringify(n))); if(HK==='pcs' && !String(ed.initiativeName||'').trim()) ed.initiativeName=ed.name||''; ed.abilities=(ed.abilities||[]).map(function(a){return Object.assign({name:'',note:'',text:'',tr:false,trn:1,trp:'day',rc:false,rcv:[],action:''},a);}); ed.attacks=(ed.attacks||[]).map(function(a){return Object.assign({name:'',hit:'',note:'',text:'',action:''},a);}); ed.lactions=(ed.lactions||[]).map(function(a){return Object.assign({name:'',cost:1,note:'',text:''},a);}); edId = n.id; } R.innerHTML = formHTML(); var preview=R.querySelector('#npcStatPreview'); if(preview){try{preview.innerHTML=statHTML({id:'npc-preview',name:ed.name||'Название NPC',hp:ed.hp,used:{a:{},s:{},l:{},lock:{}}},ed);}catch(err){preview.innerHTML='<p class="note">Не удалось построить предпросмотр: '+esc(err.message||err)+'</p>';}} }
   else { ed = null; R.innerHTML = sheetHTML(n); }
 }
 
@@ -1223,7 +1241,7 @@ function imageFileToData(file,maxDim,quality){
 function formHTML(){
   var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?'Редактирование NPC':'Новый NPC')+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
   h += '<div class="npc-edit-layout"><div class="npc-edit-main">';
-  h += '<div class="blk"><b>Изображение NPC</b><div class="fld"><label>Загрузить PNG / JPEG</label><input type="file" accept="image/png,image/jpeg,image/webp" data-image-upload="npc"><p class="note">Изображение автоматически уменьшится для хранения. '+((e.image||e.tokenImage)?'<img class="npc-sheet-image" src="'+escA(e.tokenImage||e.image)+'" alt="">':'')+'</p><button type="button" class="small" data-a="clearImage">Удалить изображение</button></div></div>' + F('name','Имя',e.name)+'<div class="grid" style="grid-template-columns:repeat(4,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+'<div class="fld"><label>П. вним.</label><div class="big pvbox" id="pvv">'+(passiveOf(e)==null?'—':passiveOf(e))+'</div></div>'+F('hp','max ХП',e.hp,'big')+'</div>';
+  h += '<div class="blk"><b>'+(HK==='pcs'?'Изображение персонажа':'Изображение NPC')+'</b><div class="fld"><label>Загрузить PNG / JPEG</label><input type="file" accept="image/png,image/jpeg,image/webp" data-image-upload="npc"><p class="note">Изображение автоматически уменьшится для хранения. '+((e.image||e.tokenImage)?'<img class="npc-sheet-image" src="'+escA(e.tokenImage||e.image)+'" alt="">':'')+'</p><button type="button" class="small" data-a="clearImage">Удалить изображение</button></div></div>' + F('name','Имя',e.name)+(HK==='pcs'?F('initiativeName','Имя в инициативе',e.initiativeName||e.name):'')+'<div class="grid" style="grid-template-columns:repeat(4,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+'<div class="fld"><label>П. вним.</label><div class="big pvbox" id="pvv">'+(passiveOf(e)==null?'—':passiveOf(e))+'</div></div>'+F('hp','max ХП',e.hp,'big')+'</div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="mage" data-re="1" style="width:auto"'+(e.mage?' checked':'')+'> Маг</label></div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="showSpellInfo" style="width:auto"'+(e.showSpellInfo?' checked':'')+'> Показывать СЛ спасброска и модификатор атаки заклинанием в статблоке</label></div>';
   if(!e.mage){ h += F('dc','СЛ спасброска от заклинаний',e.dc)+F('spellAtk','Мод. атаки закл.',e.spellAtk); }
@@ -1327,7 +1345,7 @@ function bindSheet(R){
     }
     else if(a==='save'){
       if(!ed.name.trim()){ alert('Впишите имя'); return; }
-      var data = JSON.parse(JSON.stringify(ed)); delete data.id;
+      var data = JSON.parse(JSON.stringify(ed)); if(HK==='pcs') data.initiativeName=String(data.initiativeName||data.name||'').trim()||data.name; delete data.id;
       var ref = edId ? fdb.collection(cx.col).doc(edId) : fdb.collection(cx.col).doc();
       ref.set(data).catch(function(err){ alert('Не сохранилось: '+err.message); });
       ed = null; location.hash = '#'+HK+'/'+ref.id; renderNpc([HK,ref.id]);
