@@ -1221,7 +1221,7 @@ function renderQueue(){
   }).join('');
   var pcs = cr.filter(function(c){ return c.pc && (isGM() || c.id==='pc-'+playerPcId()); }), sig = pcs.map(function(c){ return c.id; }).join();
   if(sig!==qSig){ qSig = sig; var cur = $('qWho').value; $('qWho').innerHTML = pcs.map(function(c){ return '<option value="'+escA(c.id)+'">'+esc(c.name)+'</option>'; }).join(''); if(cur && pcs.some(function(c){return c.id===cur;})) $('qWho').value = cur; }
-  if(!isGM()){ var own=Array.isArray(PCS)?PCS.filter(function(x){return x.id===playerPcId();})[0]:null; var statBox=$('qPlayerStat'); if(statBox){ var pcCreature=cr.filter(function(c){return c.pc && c.id==='pc-'+playerPcId();})[0]; statBox.style.display=own?'block':'none'; statBox.innerHTML=own?('<h2 style="margin:0 0 12px">Твой персонаж</h2>'+statHTML({id:'pc-'+own.id,name:own.name,hp:own.hp,used:{a:{},s:{},l:{},lock:{}}},own)) : ''; } } else if($('qPlayerStat')) $('qPlayerStat').style.display='none';
+  if(!isGM()){ var own=Array.isArray(PCS)?PCS.filter(function(x){return x.id===playerPcId();})[0]:null; var statBox=$('qPlayerStat'); if(statBox){ statBox.style.display=own?'block':'none'; statBox.innerHTML=own?('<h2 style="margin:0 0 12px">Твой персонаж</h2>'+statHTML({id:'pc-'+own.id,pc:true,pcId:own.id,name:own.name,hp:own.hp,used:{a:{},s:{},l:{},lock:{}}},own)) : ''; } } else if($('qPlayerStat')) $('qPlayerStat').style.display='none';
 }
 $('qList').addEventListener('click',function(e){
   var b=e.target.closest('button[data-act="tag"]'); if(!b||!COMBAT||!fdb)return;
@@ -1254,8 +1254,9 @@ function renderNpc(parts){
   if(HK==='pcs' && !isGM()){
     var ownId=playerPcId();
     if(!ownId){ $('pcRoot').innerHTML='<h1>Нет доступа</h1><p class="note">Для этого аккаунта не назначен персонаж.</p>'; return; }
-    if(p[1]==='new' || p[2]==='edit'){ location.hash='#pcs/'+ownId; return; }
+    if(p[1]==='new'){ location.hash='#pcs/'+ownId; return; }
     if(p[1] && p[1]!==ownId){ location.hash='#pcs/'+ownId; return; }
+    if(p[2]==='edit' && p[1]!==ownId){ location.hash='#pcs/'+ownId; return; }
   }
   var R = $(cx.root), D = kdata();
   // Ensure the active root always has visible content while its Firestore data loads.
@@ -1275,7 +1276,7 @@ function listRows(){
   var q = String(NQ||'').toLowerCase();
   return kdata().filter(function(n){ return String(n.name == null ? '' : n.name).toLowerCase().indexOf(q)>-1; })
     .sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); })
-    .map(function(n){ return '<li class="row npc" style="grid-template-columns:1fr auto"><span class="name"><a href="#'+HK+'/'+n.id+'" style="color:var(--text)">'+esc(n.name||'Без имени')+'</a>'+(n.cr?'<small>БМ '+esc(n.cr)+'</small>':'')+'</span>'+(isGM()?'<a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a>':'')+'</li>'; }).join('')
+    .map(function(n){ return '<li class="row npc" style="grid-template-columns:1fr auto"><span class="name"><a href="#'+HK+'/'+n.id+'" style="color:var(--text)">'+esc(n.name||'Без имени')+'</a>'+(n.cr?'<small>БМ '+esc(n.cr)+'</small>':'')+'</span>'+(canAccessPc(n.id)?'<a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a>':'')+'</li>'; }).join('')
     || '<li class="empty">Ничего нет. Нажмите «Создать NPC».</li>';
 }
 function listHTML(){
@@ -1285,7 +1286,7 @@ function listHTML(){
 
 function sheetHTML(n){
   var st = n.stats||{}, h = '', pb = numOf(n.cr)||0;
-  h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#'+HK+'">К списку</a>'+(isGM()?'<a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a>':'')+'</div></div>';
+  h += '<div class="bar" style="justify-content:space-between"><h1>'+esc(n.name)+'</h1><div class="bar"><a class="btn" href="#'+HK+'">К списку</a>'+(canAccessPc(n.id)?'<a class="btn" href="#'+HK+'/'+n.id+'/edit">Редактировать</a>':'')+'</div></div>';
   if(n.tokenImage||n.image) h += '<img class="npc-sheet-image" src="'+escA(n.tokenImage||n.image)+'" alt="'+escA(n.name)+'">';
   h += '<div class="bigstats"><div><span>БМ</span><b>'+dash(n.cr)+'</b></div><div><span>КД</span><b>'+dash(n.ac)+'</b></div><div><span>П. вним.</span><b>'+dash(passiveOf(n))+'</b></div><div><span>ХП</span><b>'+dash(n.hp)+'</b></div></div>';
   h += '<table class="st"><tr><td></td>'+STATS.map(function(s){ return '<td><b>'+s[1]+'</b></td>'; }).join('')+'</tr><tr><td>Знач.</td>'+STATS.map(function(s){ return '<td>'+dash(st[s[0]])+'</td>'; }).join('')+'</tr><tr><td>Мод.</td>'+STATS.map(function(s){ return '<td>'+fm(mod(st[s[0]]))+'</td>'; }).join('')+'</tr></table>';
@@ -1325,7 +1326,7 @@ function imageFileToData(file,maxDim,quality){
   });
 }
 function formHTML(){
-  var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?'Редактирование NPC':'Новый NPC')+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
+  var e = ed, h = '<div class="bar" style="justify-content:space-between"><h1>'+(edId?(HK==='pcs'?'Редактирование персонажа':'Редактирование NPC'):(HK==='pcs'?'Новый персонаж':'Новый NPC'))+'</h1><div class="bar"><button class="bigY" data-a="save">Сохранить</button><button data-a="cancel">Отмена</button>'+(edId&&isGM()?'<button class="small" data-a="del" style="color:var(--npc)">Удалить</button>':'')+'</div></div>';
   h += '<div class="npc-edit-layout"><div class="npc-edit-main">';
   h += '<div class="blk"><b>'+(HK==='pcs'?'Изображение персонажа':'Изображение NPC')+'</b><div class="fld"><label>Загрузить PNG / JPEG</label><input type="file" accept="image/png,image/jpeg,image/webp" data-image-upload="npc"><p class="note">Изображение автоматически уменьшится для хранения. '+((e.image||e.tokenImage)?'<img class="npc-sheet-image" src="'+escA(e.tokenImage||e.image)+'" alt="">':'')+'</p><button type="button" class="small" data-a="clearImage">Удалить изображение</button></div></div>' + F('name','Имя',e.name)+(HK==='pcs'?F('initiativeName','Имя в инициативе',e.initiativeName||e.name):'')+'<div class="grid" style="grid-template-columns:repeat(4,minmax(90px,170px))">'+F('cr','БМ',e.cr,'big')+F('ac','КД',e.ac,'big')+'<div class="fld"><label>П. вним.</label><div class="big pvbox" id="pvv">'+(passiveOf(e)==null?'—':passiveOf(e))+'</div></div>'+F('hp','max ХП',e.hp,'big')+'</div>';
   h += '<div class="fld"><label><input type="checkbox" data-p="mage" data-re="1" style="width:auto"'+(e.mage?' checked':'')+'> Маг</label></div>';
@@ -1425,6 +1426,7 @@ function bindSheet(R){
     else if(a==='rmTag'){ ed[b.dataset.k].splice(i,1); again(); }
     else if(a==='cancel'){ var id = edId; ed = null; location.hash = id ? '#'+HK+'/'+id : '#'+HK; }
     else if(a==='del'){
+      if(!isGM()) return;
       if(!confirm('Удалить этого NPC насовсем?')) return;
       fdb.collection(cx.col).doc(edId).delete().catch(function(err){ alert('Не удалилось: '+err.message); });
       ed = null; location.hash = '#'+HK;
