@@ -34,8 +34,8 @@ ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px
 .row.npc{border-left-color:var(--npc)}
 .row.off{opacity:.45}
 .row.current{border-color:var(--brass);border-left-color:var(--brass);box-shadow:0 0 0 1px var(--brass)}
-.row.tie{border-color:#e58a36;border-left-color:#e58a36;box-shadow:0 0 0 1px #e58a36}
-.row.tie.current{border-color:#e58a36;border-left-color:#e58a36;box-shadow:0 0 0 1px #e58a36}
+.row.tie{border-color:#e04444;border-left-color:#e04444;box-shadow:0 0 0 1px #e04444}
+.row.tie.current{border-color:#e04444;border-left-color:#e04444;box-shadow:0 0 0 1px #e04444}
 .name{font-weight:600;overflow-wrap:anywhere}
 .name small{color:var(--muted);font-weight:400;margin-left:6px}
 .init{width:100%;box-sizing:border-box;text-align:center;font-size:18px;font-weight:700}.init-wrap{display:flex;flex-direction:column;gap:2px;min-width:0}.init-total{font-size:10px;color:var(--muted);text-align:center;white-space:nowrap}
@@ -114,7 +114,7 @@ table.st{border-collapse:collapse}table.st td{padding:4px 12px 4px 0;border:0}
 .slot{display:inline-block;width:18px;height:18px;border:2px solid var(--brass);border-radius:4px;margin-right:4px;vertical-align:middle}
 a.btn{text-decoration:none;color:var(--text);display:inline-block}
 textarea{width:100%;min-height:80px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit}
-body.guest .gm-only,body.guest .tags:not(.qt){display:none}
+body.guest .gm-only{display:none}body.guest .row.npc .tags{display:none}body.guest .row:not(.npc) .tags{display:flex}
 body.guest main{grid-template-columns:1fr}
 .extra{grid-column:1 / 3;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:14px;color:var(--muted)}
 .extra b{color:var(--text)}.extra input{width:72px;padding:4px 8px}
@@ -561,9 +561,9 @@ function render(){
   document.body.classList.toggle('guest', !isGM());
   var present = S.creatures.filter(function(c){return c.active;});
   var initCounts = {};
-  present.forEach(function(c){ var v=initiativeTotal(c); if(v!=null){ var k=String(v); initCounts[k]=(initCounts[k]||0)+1; } });
+  present.forEach(function(c){ var v=initiativeTotal(c), dm=dexModOf(c); if(v!=null){ var k=String(v)+'|'+String(dm==null?0:dm); initCounts[k]=(initCounts[k]||0)+1; } });
   var tiedIds = {};
-  present.forEach(function(c){ var v=initiativeTotal(c); if(v!=null && initCounts[String(v)]>1) tiedIds[c.id]=true; });
+  present.forEach(function(c){ var v=initiativeTotal(c), dm=dexModOf(c), k=String(v)+'|'+String(dm==null?0:dm); if(v!=null && initCounts[k]>1) tiedIds[c.id]=true; });
   var html = present.map(function(c){
     var cls = 'row' + (c.pc?'':' npc') + (S.turn===c.id?' current':'') + (tiedIds[c.id]?' tie':'');
     return '<li class="'+cls+'" data-id="'+c.id+'">'+
@@ -658,7 +658,13 @@ function resetRoundTrackers(){ S.creatures.forEach(function(c){ var n = npcOf(c)
 function val(c){ var n=initiativeTotal(c); return n==null ? -Infinity : n; }
 $('startFight').onclick = function(){
   var oldOrder = S.creatures.slice();
-  S.creatures.sort(function(a,b){ if(a.active!==b.active)return a.active?-1:1; var d=val(b)-val(a); return d===0||isNaN(d)?oldOrder.indexOf(a)-oldOrder.indexOf(b):d; });
+  S.creatures.sort(function(a,b){
+    if(a.active!==b.active)return a.active?-1:1;
+    var d=val(b)-val(a); if(d && !isNaN(d)) return d;
+    var am=dexModOf(a), bm=dexModOf(b); am=am==null?0:am; bm=bm==null?0:bm;
+    if(am!==bm) return bm-am;
+    return oldOrder.indexOf(a)-oldOrder.indexOf(b);
+  });
   var act = S.creatures.filter(function(c){return c.active;});
   if(!act.length){ alert('В очереди нет участников боя.'); return; }
   S.turn = act[0].id;
@@ -1052,8 +1058,26 @@ function seedLore(){
 }
 function mergeTags(sn){
   var refs=[],changed=false;
-  sn.docChanges().forEach(function(ch){if(ch.type!=='added')return;var d=ch.doc.data(),c=find(d.cid);if(d.fightId!==S.fightId){refs.push(ch.doc.ref);return;}if(c&&c.pc&&c.active&&d.t){var ex=c.tags.filter(function(x){return x.t===d.t;})[0];if(ex){ex.note=d.note||'';ex.dur=d.dur;ex.start=S.round;}else c.tags.push({t:d.t,note:d.note||'',dur:d.dur,start:S.round});changed=true;refs.push(ch.doc.ref);}});
-  if(changed){render();flushCombat().then(function(){refs.forEach(function(r){r.delete().catch(function(){});});}).catch(function(err){fbErr=err.message;});}else refs.forEach(function(r){r.delete().catch(function(){});});
+  sn.docChanges().forEach(function(ch){
+    if(ch.type!=='added')return;
+    var d=ch.doc.data(),c=find(d.cid);
+    if(d.fightId!==S.fightId){refs.push(ch.doc.ref);return;}
+    if(c&&c.pc&&c.active&&d.t){
+      if(d.action==='remove'){
+        var before=c.tags.length;
+        c.tags=c.tags.filter(function(x){return x.t!==d.t;});
+        if(c.tags.length!==before) changed=true;
+      }else{
+        var ex=c.tags.filter(function(x){return x.t===d.t;})[0];
+        if(ex){ex.note=d.note||'';ex.dur=d.dur;ex.start=S.round;}
+        else c.tags.push({t:d.t,note:d.note||'',dur:d.dur,start:S.round});
+        changed=true;
+      }
+      refs.push(ch.doc.ref);
+    }
+  });
+  if(changed){render();flushCombat().then(function(){refs.forEach(function(r){r.delete().catch(function(){});});}).catch(function(err){fbErr=err.message;});}
+  else refs.forEach(function(r){r.delete().catch(function(){});});
 }
 
 function renderFightMini(){
@@ -1146,14 +1170,24 @@ function renderQueue(){
   if(!COMBAT){ $('qList').innerHTML = ''; $('qEmpty').textContent = 'Мастер ещё не начал бой.'; $('qRound').textContent = '—'; return; }
   $('qEmpty').textContent = ''; $('qRound').textContent = COMBAT.round;
   var cr = COMBAT.creatures||[], initCounts = {}, tiedIds = {};
-  cr.forEach(function(c){ if(c.init!=='' && c.init!=null && !isNaN(+c.init)){ var k=String(+c.init); initCounts[k]=(initCounts[k]||0)+1; } });
-  cr.forEach(function(c){ if(c.init!=='' && c.init!=null && !isNaN(+c.init) && initCounts[String(+c.init)]>1) tiedIds[c.id]=true; });
+  cr.forEach(function(c){ if(c.init!=='' && c.init!=null && !isNaN(+c.init)){ var k=String(+c.init)+'|'+String(c.initMod==null?0:c.initMod); initCounts[k]=(initCounts[k]||0)+1; } });
+  cr.forEach(function(c){ var k=String(+c.init)+'|'+String(c.initMod==null?0:c.initMod); if(c.init!=='' && c.init!=null && !isNaN(+c.init) && initCounts[k]>1) tiedIds[c.id]=true; });
   $('qList').innerHTML = cr.map(function(c){
-    return '<li class="row'+(c.pc?'':' npc')+(COMBAT.turn===c.id?' current':'')+(tiedIds[c.id]?' tie':'')+'"><span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small></span><b style="font-size:22px;text-align:center">'+(c.init===''?'—':esc(c.init))+'</b><div class="tags qt">'+(c.tags||[]).map(function(t,i){ return tagHTML(t,i,COMBAT.round,true); }).join('')+'</div></li>';
+    var tags=c.pc?(c.tags||[]):[];
+    return '<li class="row'+(c.pc?'':' npc')+(COMBAT.turn===c.id?' current':'')+(tiedIds[c.id]?' tie':'')+'" data-qid="'+escA(c.id)+'"><span class="name">'+esc(c.name)+'<small>'+(c.pc?'игрок':'НПС')+'</small></span><b style="font-size:22px;text-align:center">'+(c.init===''?'—':esc(c.init))+'</b><div class="tags qt">'+tags.map(function(t,i){ return tagHTML(t,i,COMBAT.round,false); }).join('')+'</div></li>';
   }).join('');
   var pcs = cr.filter(function(c){ return c.pc; }), sig = pcs.map(function(c){ return c.id; }).join();
   if(sig!==qSig){ qSig = sig; var cur = $('qWho').value; $('qWho').innerHTML = pcs.map(function(c){ return '<option value="'+escA(c.id)+'">'+esc(c.name)+'</option>'; }).join(''); if(cur) $('qWho').value = cur; }
 }
+$('qList').addEventListener('click',function(e){
+  var b=e.target.closest('button[data-act="tag"]'); if(!b||!COMBAT||!fdb)return;
+  var li=b.closest('[data-qid]'), c=li&&COMBAT.creatures.filter(function(x){return x.id===li.dataset.qid;})[0];
+  var idx=+b.dataset.i, tag=c&&c.pc&&c.tags?c.tags[idx]:null; if(!tag)return;
+  var removed=tag.t;
+  c.tags.splice(idx,1); renderQueue();
+  fdb.collection('playerTags').add({action:'remove',fightId:COMBAT.fightId||'',cid:c.id,t:removed,by:(user&&user.email)||''})
+    .catch(function(err){$('qEmpty').textContent='Не удалось снять состояние: '+err.message;});
+});
 setupAC($('qCond'), $('qCondList'), function(){ return (COMBAT && COMBAT.conditions) || STATE_LIST; }, function(){ $('qNote').focus(); });
 setupAC($('qNote'), $('qNoteList'), NOTES, function(){ $('qApply').click(); });
 $('qApply').onclick = function(){
