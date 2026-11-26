@@ -121,16 +121,16 @@ body.guest main{grid-template-columns:1fr}
 .extra b{color:var(--text)}.extra input{width:72px;padding:4px 8px}
 .slot.used{background:var(--brass)}#stat .slot{cursor:pointer}
 .lcol{display:flex;flex-direction:column;gap:20px;min-width:0}
-/* Combat layout: navigation is in normal document flow; the tracker fills only the space below it. */
-#v-tracker.view.on{display:flex;flex-direction:column;height:calc(100dvh - var(--global-nav-height, 60px));min-height:0;overflow:hidden;}
-#v-tracker>header{flex:0 0 auto;min-height:0;}
-#v-tracker>main{flex:1 1 0;height:auto;min-height:0;box-sizing:border-box;align-items:stretch;padding:16px 24px 0;overflow:hidden;}
-.a-act{position:relative;top:auto;align-self:stretch;min-width:0;min-height:0;height:100%;max-height:100%;overflow:hidden;padding-right:0;box-sizing:border-box}.a-act #stat{display:block;width:100%;height:100%;max-height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:auto;scrollbar-gutter:stable;padding:0 8px 12px 0;box-sizing:border-box;scrollbar-width:auto;scrollbar-color:var(--brass) var(--panel2)}.a-act #stat::-webkit-scrollbar{width:12px;display:block}.a-act #stat::-webkit-scrollbar-track{background:var(--panel2);border-radius:8px}.a-act #stat::-webkit-scrollbar-thumb{background:var(--brass);border:2px solid var(--panel2);border-radius:8px}.a-act #stat::-webkit-scrollbar-thumb:hover{background:#f0bd70}
-.a-all{position:relative;top:auto;align-self:stretch;height:100%;max-height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:auto;min-width:0;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:auto;scrollbar-color:var(--brass) var(--panel2)}
-.a-all::-webkit-scrollbar{width:12px}.a-all::-webkit-scrollbar-track{background:var(--panel2);border-radius:8px}.a-all::-webkit-scrollbar-thumb{background:var(--brass);border:2px solid var(--panel2);border-radius:8px}
+.a-act{position:sticky;top:var(--combat-sticky-top,12px);align-self:start;min-width:0;min-height:0;height:var(--combat-scroll-height,calc(100vh - 180px));max-height:var(--combat-scroll-height,calc(100vh - 180px));overflow:hidden;padding-right:0;box-sizing:border-box}
+.a-act #stat{display:block;width:100%;height:100%;max-height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:auto;scrollbar-gutter:stable;padding:0 8px 12px 0;box-sizing:border-box;scrollbar-width:auto;scrollbar-color:var(--brass) var(--panel2)}
+.a-act #stat::-webkit-scrollbar,.a-all::-webkit-scrollbar{width:12px;display:block}
+.a-act #stat::-webkit-scrollbar-track,.a-all::-webkit-scrollbar-track{background:var(--panel2);border-radius:8px}
+.a-act #stat::-webkit-scrollbar-thumb,.a-all::-webkit-scrollbar-thumb{background:var(--brass);border:2px solid var(--panel2);border-radius:8px}
+.a-act #stat::-webkit-scrollbar-thumb:hover,.a-all::-webkit-scrollbar-thumb:hover{background:#f0bd70}
+.a-all{position:sticky;top:var(--combat-sticky-top,12px);align-self:start;min-width:0;min-height:0;height:var(--combat-scroll-height,calc(100vh - 180px));max-height:var(--combat-scroll-height,calc(100vh - 180px));overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:auto;box-sizing:border-box;scrollbar-gutter:stable;scrollbar-width:auto;scrollbar-color:var(--brass) var(--panel2)}
 #stat .blk{border:2px solid var(--brass);margin:0}
 .placeholder{border:2px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);text-align:center}
-@media(max-width:820px){#v-tracker.view.on{display:block;height:auto;min-height:0;overflow:visible}#v-tracker>main{display:grid;flex:none;height:auto;min-height:0;grid-template-columns:1fr;padding:14px;overflow:visible}.a-act,.a-all{position:static;height:auto;max-height:none;min-height:0;overflow:visible}.a-act #stat{height:auto;max-height:none;overflow:visible;padding:0;scrollbar-width:auto}}
+@media(max-width:820px){#v-tracker .a-act,#v-tracker .a-all{position:static;height:auto;max-height:none;min-height:0;overflow:visible}#v-tracker .a-act #stat{height:auto;max-height:none;overflow:visible;padding:0} }
 .big{font-size:26px;font-weight:700;text-align:center;padding:10px 8px}.fld input.big{width:100%}
 .bigstats{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
 .bigstats div{flex:1;min-width:90px;max-width:170px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
@@ -1502,20 +1502,35 @@ download.addEventListener('click',()=>{if(!img)return;const n=Number(size.value)
 })();
 </script>
 
-
 <script>
 (function(){
-  const nav = document.querySelector('nav.top');
-  const root = document.documentElement;
-  const update = () => {
-    if (nav) root.style.setProperty('--global-nav-height', nav.getBoundingClientRect().height + 'px');
+  const root=document.getElementById('v-tracker');
+  const nav=document.querySelector('nav.top');
+  if(!root||!nav) return;
+  const update=()=>{
+    if(window.matchMedia('(max-width: 820px)').matches){
+      root.style.removeProperty('--combat-scroll-height');
+      root.style.removeProperty('--combat-sticky-top');
+      return;
+    }
+    const header=root.querySelector(':scope > header');
+    const navH=nav.getBoundingClientRect().height;
+    const headH=header?header.getBoundingClientRect().height:0;
+    const stickyTop=Math.ceil(navH+headH+12);
+    const available=Math.max(180,Math.floor(window.innerHeight-stickyTop-16));
+    root.style.setProperty('--combat-sticky-top',stickyTop+'px');
+    root.style.setProperty('--combat-scroll-height',available+'px');
   };
   update();
-  if ('ResizeObserver' in window) {
-    const observer = new ResizeObserver(update);
-    if (nav) observer.observe(nav);
+  window.addEventListener('resize',update,{passive:true});
+  if('ResizeObserver' in window){
+    const ro=new ResizeObserver(update);
+    ro.observe(nav);
+    const h=root.querySelector(':scope > header');
+    if(h) ro.observe(h);
   }
-  window.addEventListener('resize', update, {passive:true});
+  const observer=new MutationObserver(update);
+  observer.observe(root,{attributes:true,attributeFilter:['class']});
 })();
 </script>
 </body>
