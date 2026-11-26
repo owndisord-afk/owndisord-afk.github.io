@@ -1092,6 +1092,32 @@ function mergeTags(sn){
   else refs.forEach(function(r){r.delete().catch(function(){});});
 }
 
+// Игроки получают собственные состояния напрямую из очереди запросов.
+// Это даёт мгновенное отображение, не открывая им состояния других персонажей.
+function mergePlayerTags(sn){
+  if(isGM() || !playerPcId() || !COMBAT || !Array.isArray(COMBAT.creatures)) return;
+  var changed=false, ownCid='pc-'+playerPcId();
+  sn.docChanges().forEach(function(ch){
+    if(ch.type!=='added') return;
+    var d=ch.doc.data();
+    if(d.fightId!==(COMBAT.fightId||'') || d.pcId!==playerPcId() || d.cid!==ownCid || !d.t) return;
+    var c=COMBAT.creatures.filter(function(x){return x.id===ownCid && x.pc;})[0];
+    if(!c) return;
+    c.tags=Array.isArray(c.tags)?c.tags:[];
+    if(d.action==='remove'){
+      var before=c.tags.length;
+      c.tags=c.tags.filter(function(x){return x.t!==d.t;});
+      if(c.tags.length!==before) changed=true;
+    }else{
+      var ex=c.tags.filter(function(x){return x.t===d.t;})[0];
+      if(ex){ex.note=d.note||'';ex.dur=d.dur;ex.start=COMBAT.round||1;}
+      else c.tags.push({t:d.t,note:d.note||'',dur:d.dur,start:COMBAT.round||1});
+      changed=true;
+    }
+  });
+  if(changed) renderQueue();
+}
+
 function renderFightMini(){
   var box=$('fightMiniSidebar'), list=$('fightMiniList'), round=$('fightMiniRound');
   if(!box||!list||!round)return;
@@ -1130,6 +1156,7 @@ try{
       }else{ PCS = []; }
       listen(fdb.collection('lore'), function(sn){ LORE = {}; sn.docs.forEach(function(d){ LORE[d.id] = d.data().text; }); seedLore(); refreshAll(); });
       if(gm) listen(fdb.collection('playerTags'), mergeTags);
+      else if(playerPcId()) listen(fdb.collection('playerTags').where('pcId','==',playerPcId()), mergePlayerTags);
       listen(fdb.collection('combat').doc('state'), function(doc){
         if(doc.exists){ COMBAT=doc.data()||{}; if(Array.isArray(COMBAT.conditions)){ STATE_LIST=COMBAT.conditions.map(function(x){return String(x);}); if(settingsConditionsDraft===null) settingsConditionsDraft=STATE_LIST.slice(); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } if(Array.isArray(COMBAT.statOrder)){ STAT_ORDER=COMBAT.statOrder.filter(function(k){return STAT_ORDER_DEFAULT.indexOf(k)>-1;}); STAT_ORDER_DEFAULT.forEach(function(k){if(STAT_ORDER.indexOf(k)<0)STAT_ORDER.push(k);}); if(settingsOrderDraft===null)settingsOrderDraft=STAT_ORDER.slice(); } }
         else COMBAT=null;
